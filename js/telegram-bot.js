@@ -78,6 +78,11 @@ class TelegramDealBot {
       }
     } catch (err) {
       console.warn('[TelegramBot] Polling connection notice:', err.message);
+      // เพิ่มโค้ดหน่วงเวลา 10 วินาทีเมื่อเกิด Error เพื่อป้องกัน Telegram แบน IP ชั่วคราว
+      if (this.isPolling) {
+        this.pollingTimer = setTimeout(() => this.pollUpdates(), 10000);
+      }
+      return; // ใส่ return เพื่อไม่ให้ไปรันคำสั่ง setTimeout 1.5 วินาทีด้านล่างซ้ำ
     }
 
     // ทำงานรอบถัดไป

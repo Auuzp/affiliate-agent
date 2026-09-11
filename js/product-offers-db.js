@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shopee Product Offers Database - Real Images Directly from Product Links
  */
 
@@ -2457,6 +2457,10 @@ const SHOPEE_PRODUCT_OFFERS = [
 
 if (typeof window !== 'undefined') {
   window.SHOPEE_PRODUCT_OFFERS = SHOPEE_PRODUCT_OFFERS;
+  // ป้องกันกรณีโหลดสคริปต์สลับลำดับ: ซิงก์เข้าสู่ TRENDING_DEALS_DATABASE ทันที
+  if (window.SHOP_OFFERS_DATABASE && !window.TRENDING_DEALS_DATABASE) {
+    window.TRENDING_DEALS_DATABASE = [...SHOPEE_PRODUCT_OFFERS, ...window.SHOP_OFFERS_DATABASE];
+  }
 }
 if (typeof module !== 'undefined') {
   module.exports = { SHOPEE_PRODUCT_OFFERS };

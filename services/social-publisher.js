@@ -85,14 +85,34 @@ class SocialPublisherService {
       const targetPostId = photoRes.data.post_id || photoRes.data.id;
       console.log(`[Facebook] Main post created: ${targetPostId}`);
 
-      // ปักหมุด First Comment ทันที
+      // ปักหมุด First Comment ทันที (รองรับทั้งเพจแบบคลาสสิกและ New Page Experience)
       if (firstComment && targetPostId) {
-        const commentUrl = `https://graph.facebook.com/v19.0/${targetPostId}/comments`;
-        await axios.post(commentUrl, {
-          message: firstComment,
-          access_token: this.facebookToken
-        }, { timeout: 10000 });
-        console.log(`[Facebook] First comment posted to ${targetPostId}`);
+        const candidateIds = [];
+        // สำหรับ New Page Experience: ดึงเฉพาะตัวเลขหลังเครื่องหมาย _ (Underscore)
+        if (typeof targetPostId === 'string' && targetPostId.includes('_')) {
+          const purePostId = targetPostId.split('_').pop();
+          if (purePostId) candidateIds.push(purePostId);
+        }
+        candidateIds.push(targetPostId);
+        if (photoRes.data.id && !candidateIds.includes(photoRes.data.id)) {
+          candidateIds.push(photoRes.data.id);
+        }
+
+        for (const idToTry of candidateIds) {
+          try {
+            const commentUrl = `https://graph.facebook.com/v19.0/${idToTry}/comments`;
+            const commentRes = await axios.post(commentUrl, {
+              message: firstComment,
+              access_token: this.facebookToken
+            }, { timeout: 10000 });
+            if (commentRes.data && commentRes.data.id) {
+              console.log(`[Facebook] First comment posted successfully using ID: ${idToTry}`);
+              break;
+            }
+          } catch (cErr) {
+            console.warn(`[Facebook] First comment attempt failed with ID ${idToTry}:`, cErr.response?.data?.error?.message || cErr.message);
+          }
+        }
       }
 
       return { success: true, postId: targetPostId };

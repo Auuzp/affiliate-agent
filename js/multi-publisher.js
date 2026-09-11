@@ -203,22 +203,41 @@ class MultiChannelPublisher {
     
     const targetPostId = photoData.post_id || photoData.id;
 
-    // 2. ยิง First Comment ปักลิงก์ Affiliate ทันที
+    // 2. ยิง First Comment ปักลิงก์ Affiliate ทันที (รองรับทั้งเพจแบบคลาสสิกและ New Page Experience)
     let commentData = null;
     if (targetPostId && firstComment) {
-      try {
-        const commentEndpoint = `https://graph.facebook.com/v19.0/${targetPostId}/comments`;
-        const commentResponse = await fetch(commentEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: firstComment,
-            access_token: this.facebook.accessToken
-          })
-        });
-        commentData = await commentResponse.json();
-      } catch (cErr) {
-        console.warn('First comment failed, main post was successful:', cErr);
+      const candidateIds = [];
+      // สำหรับ New Page Experience: ดึงเฉพาะตัวเลขหลังเครื่องหมาย _ (Underscore)
+      if (typeof targetPostId === 'string' && targetPostId.includes('_')) {
+        const purePostId = targetPostId.split('_').pop();
+        if (purePostId) candidateIds.push(purePostId);
+      }
+      candidateIds.push(targetPostId);
+      if (photoData.id && !candidateIds.includes(photoData.id)) {
+        candidateIds.push(photoData.id);
+      }
+
+      for (const idToTry of candidateIds) {
+        try {
+          const commentEndpoint = `https://graph.facebook.com/v19.0/${idToTry}/comments`;
+          const commentResponse = await fetch(commentEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: firstComment,
+              access_token: this.facebook.accessToken
+            })
+          });
+          commentData = await commentResponse.json();
+          if (commentData && commentData.id && !commentData.error) {
+            console.log(`[Facebook] First comment posted successfully using ID: ${idToTry}`);
+            break;
+          } else {
+            console.warn(`[Facebook] First comment with ID ${idToTry} returned:`, commentData?.error?.message || commentData);
+          }
+        } catch (cErr) {
+          console.warn(`[Facebook] First comment attempt failed with ID ${idToTry}:`, cErr.message);
+        }
       }
     }
 

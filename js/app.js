@@ -455,8 +455,10 @@ class AffiliateApp {
 
     if (this.outSchemeUrl) this.outSchemeUrl.value = result.deepLink;
     if (this.outBridgeUrl) this.outBridgeUrl.value = result.bridgeUrl;
-    if (this.outAffUrl) this.outAffUrl.value = result.affiliateUrl;
-    if (this.testOpenDeepLinkBtn) this.testOpenDeepLinkBtn.href = result.bridgeUrl;
+    if (this.testOpenDeepLinkBtn) {
+      this.testOpenDeepLinkBtn.href = result.bridgeUrl;
+      this.testOpenDeepLinkBtn.rel = 'noopener noreferrer';
+    }
 
     if (this.deepLinkResultsCard) this.deepLinkResultsCard.classList.remove('hidden');
     this.logActivity(`สร้าง Mobile Deep Link สำเร็จ (Sub-ID: ${subId})`, 'success');

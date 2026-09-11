@@ -505,19 +505,30 @@ const RESERVE_STORES_CATALOG = [
 ];
 
 // รวมดีลทั้งหมดโดยให้ข้อเสนอสินค้า (Product Offers จาก affiliate.shopee.co.th/offer/product_offer) เป็นดีลหลักอันดับแรกเสมอ
-const primaryProductOffers = (typeof window !== 'undefined' && window.SHOPEE_PRODUCT_OFFERS && Array.isArray(window.SHOPEE_PRODUCT_OFFERS)) 
-  ? window.SHOPEE_PRODUCT_OFFERS 
-  : [];
+function getFullTrendingDeals() {
+  const primaryProductOffers = (typeof window !== 'undefined' && window.SHOPEE_PRODUCT_OFFERS && Array.isArray(window.SHOPEE_PRODUCT_OFFERS)) 
+    ? window.SHOPEE_PRODUCT_OFFERS 
+    : (typeof SHOPEE_PRODUCT_OFFERS !== 'undefined' && Array.isArray(SHOPEE_PRODUCT_OFFERS) ? SHOPEE_PRODUCT_OFFERS : []);
+  return [...primaryProductOffers, ...SHOP_OFFERS_DATABASE];
+}
 
-const TRENDING_DEALS_DATABASE = [...primaryProductOffers, ...SHOP_OFFERS_DATABASE];
+let TRENDING_DEALS_DATABASE = getFullTrendingDeals();
 
-// ส่งออกให้ใช้งานในแอป
+// ส่งออกให้ใช้งานในแอป (ใช้ getter ป้องกันปัญหาเรื่องลำดับการโหลดไฟล์ 100%)
 if (typeof window !== 'undefined') {
   window.SHOP_OFFERS_DATABASE = SHOP_OFFERS_DATABASE;
-  window.TRENDING_DEALS_DATABASE = TRENDING_DEALS_DATABASE;
   window.RESERVE_STORES_CATALOG = RESERVE_STORES_CATALOG;
+  try {
+    Object.defineProperty(window, 'TRENDING_DEALS_DATABASE', {
+      get: () => getFullTrendingDeals(),
+      set: (val) => { TRENDING_DEALS_DATABASE = val; },
+      configurable: true
+    });
+  } catch (e) {
+    window.TRENDING_DEALS_DATABASE = TRENDING_DEALS_DATABASE;
+  }
 }
 if (typeof module !== 'undefined') {
-  module.exports = { TRENDING_DEALS_DATABASE, SHOP_OFFERS_DATABASE, RESERVE_STORES_CATALOG };
+  module.exports = { TRENDING_DEALS_DATABASE, SHOP_OFFERS_DATABASE, RESERVE_STORES_CATALOG, getFullTrendingDeals };
 }
 
