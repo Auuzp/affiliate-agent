@@ -134,11 +134,14 @@ Pain Point: "${painPoint.hook}"
   formatPayloads(deal, tone, urls, content) {
     const complianceNotice = '#ShopeeAffiliate #คอมมิชชั่น (ได้รับค่าตอบแทนเมื่อสั่งซื้อผ่านลิงก์)';
 
+    // แคปชัน Facebook แบบรวมพิกัดลิงก์และโค้ดลดในโพสต์ทันที เพื่อ Conversion Rate สูงสุด
+    const fbCaptionWithLink = `${content.fbText}\n\n👇 พิกัดร้านแท้ & โค้ดลดพิเศษ (จิ้มตรงนี้ได้เลย):\n👉 ${urls.fb}\n\n${complianceNotice}`;
+
     return {
       deal,
       tone: tone.id,
       timestamp: new Date().toLocaleTimeString('th-TH'),
-      caption: content.fbText,
+      caption: fbCaptionWithLink,
       affiliateUrl: urls.tg,
 
       telegram: {
@@ -150,7 +153,7 @@ Pain Point: "${painPoint.hook}"
       },
 
       facebook: {
-        caption: content.fbText,
+        caption: fbCaptionWithLink,
         imageUrl: deal.imageUrl,
         firstComment: `🛒 พิกัดร้านแท้/โค้ดลดพิเศษ จิ้มตรงนี้ได้เลยครับ 👉 ${urls.fb}\n\n${complianceNotice}`,
         subId: 'fb_page'

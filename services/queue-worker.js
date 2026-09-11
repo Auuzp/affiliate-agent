@@ -68,9 +68,9 @@ class QueueWorkerService {
       console.warn('[QueueWorker] Telegram daily quota reached');
     }
 
-    // 2. Twitter / X Job (หน่วง 5 - 10 นาที)
+    // 2. Twitter / X Job (หน่วงเบาๆ 5 - 10 วินาที)
     if (this.dailyCounts.twitter < this.dailyLimits.twitter) {
-      const twitterJitterMs = (5 + Math.floor(Math.random() * 5)) * 60 * 1000;
+      const twitterJitterMs = (5 + Math.floor(Math.random() * 5)) * 1000;
       const twJob = {
         id: `job-tw-${now}`,
         platform: 'twitter',
@@ -82,9 +82,9 @@ class QueueWorkerService {
       jobsCreated.push(twJob);
     }
 
-    // 3. Facebook Page Job (หน่วง 12 - 18 นาที)
+    // 3. Facebook Page Job (หน่วงเบาๆ 15 - 30 วินาที ไม่ต้องรอนาน)
     if (this.dailyCounts.facebook < this.dailyLimits.facebook) {
-      const fbJitterMs = (12 + Math.floor(Math.random() * 6)) * 60 * 1000;
+      const fbJitterMs = (15 + Math.floor(Math.random() * 15)) * 1000;
       const fbJob = {
         id: `job-fb-${now}`,
         platform: 'facebook',
