@@ -150,10 +150,16 @@ class MultiChannelPublisher {
   async sendToTelegram(caption, imageUrl, buttonText = '👉 สั่งซื้อตรงนี้', buttonUrl = '') {
     const endpoint = `https://api.telegram.org/bot${this.telegram.botToken}/sendPhoto`;
     
+    // ตัดคำ Caption ไม่ให้เกิน 1,020 ตัวอักษร เพื่อป้องกัน Error 400 จาก Telegram (จำกัดที่ 1,024 ตัวอักษร)
+    let cleanCaption = (caption || '').trim();
+    if (cleanCaption.length > 1020) {
+      cleanCaption = cleanCaption.slice(0, 1017) + '...';
+    }
+
     const bodyPayload = {
       chat_id: this.telegram.channelId,
       photo: imageUrl,
-      caption: caption
+      caption: cleanCaption
     };
 
     // แนบปุ่ม Inline Keyboard Button เมื่อมี URL

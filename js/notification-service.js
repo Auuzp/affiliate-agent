@@ -257,7 +257,8 @@ class NotificationService {
     if (this.broadcastTg && this.publisher && this.publisher.telegram.enabled && this.publisher.telegram.botToken) {
       try {
         const tgCaption = `⚡ ${gh.title}\n\n${gh.body}\n\n🛒 แตะเปิดในแอป Shopee ทันที 👉 ${targetUrl}\n(หรือเปิดผ่าน Deep Link 👉 ${bridgeUrl})`;
-        await this.publisher.sendToTelegram(tgCaption, gh.icon);
+        const buttonText = '👉 แตะรับโค้ด & ช้อปด่วน';
+        await this.publisher.sendToTelegram(tgCaption, gh.icon, buttonText, targetUrl);
         tgSent = true;
       } catch (tgErr) {
         console.warn('Failed to broadcast Golden Hour to Telegram:', tgErr);

@@ -26,11 +26,17 @@ class SocialPublisherService {
       return { success: true, simulated: true };
     }
 
+    // ตัดคำ Caption ไม่ให้เกิน 1,020 ตัวอักษร เพื่อป้องกัน Error 400 จาก Telegram
+    let cleanCaption = (caption || '').trim();
+    if (cleanCaption.length > 1020) {
+      cleanCaption = cleanCaption.slice(0, 1017) + '...';
+    }
+
     const endpoint = `https://api.telegram.org/bot${this.telegramToken}/sendPhoto`;
     const payload = {
       chat_id: this.telegramChannelId,
       photo: imageUrl,
-      caption: caption,
+      caption: cleanCaption,
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
