@@ -1,0 +1,26 @@
+# Dependency directories
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables & Secrets (CRITICAL)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Temporary test & scratch scripts
+test_*.js
+auto_fire.js
+post_*.js
+*.tmp
+*.log
+
+# OS generated files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# System generated
+.system_generated/

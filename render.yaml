@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: dealy-affiliate-pilot
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: WEBHOOK_RELAY_URL
+        sync: false
+      - key: FACEBOOK_PAGE_ID
+        value: "106756152526353"
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHANNEL_ID
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SHOPEE_APP_ID
+        value: "15349720148"
+      - key: SHOPEE_APP_SECRET
+        sync: false

@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AffiliatePilot AI — บอทสร้างลิงก์และโพสต์อัตโนมัติ 3 ช่องทาง (Telegram, Facebook, X)</title>
+  <meta name="description" content="ระบบ AI Agent อัตโนมัติสร้างลิงก์รับเงิน Shopee และยิงโพสต์ขึ้น Telegram, Facebook Page, X (Twitter) 24 ชม.">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+            heading: ['Kanit', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          },
+          colors: {
+            brand: {
+              500: '#6366f1',
+              600: '#4f46e5',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-[#07090e] text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-slate-800/80 bg-[#090d16]/90 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+              AffiliatePilot<span class="text-emerald-400">.ai</span>
+            </span>
+            <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">
+              PRODUCTION READY
+            </span>
+          </div>
+          <div class="flex items-center gap-2 text-[11px] text-slate-400">
+            <span id="agentStatusBeacon" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+            <span id="agentStatusText" class="font-medium text-slate-400">โหมดสแตนด์บาย (STANDBY)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Control Buttons -->
+      <div class="flex items-center gap-2.5">
+        <button id="triggerNowBtn" class="px-3.5 py-2 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-900/80 text-xs font-semibold text-slate-300 hover:text-white transition flex items-center gap-1.5">
+          <i data-lucide="sparkles" class="w-4 h-4 text-indigo-400"></i>
+          <span>สแกน & โพสต์ทันที</span>
+        </button>
+
+        <button id="autoPilotBtn" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition flex items-center gap-2">
+          <i data-lucide="play" class="w-4 h-4"></i>
+          <span>เปิดระบบ Auto-Pilot 3 ช่องทาง</span>
+        </button>
+
+        <button id="openDeepLinkBtn" title="สร้าง Deep Link และดู Sub-ID" class="px-3 py-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1.5 text-xs font-semibold">
+          <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+          <span>Deep Link & Sub-ID</span>
+        </button>
+
+        <button id="openGrowthToolkitBtn" title="กลยุทธ์หาคนใช้งานกลุ่มแรก" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-90 text-white transition flex items-center gap-1.5 text-xs font-bold shadow-md shadow-pink-600/20">
+          <i data-lucide="rocket" class="w-4 h-4"></i>
+          <span>🚀 แผนหาผู้ใช้กลุ่มแรก</span>
+        </button>
+
+        <button id="openSettingsBtn" title="ตั้งค่า 3 ช่องทาง" class="p-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1.5 text-xs font-semibold">
+          <i data-lucide="settings" class="w-4 h-4 text-indigo-400"></i>
+          <span>ตั้งค่าระบบ</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Dashboard Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Top Performance Stats Cards (Starts clean at 0 for Production) -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <div class="bg-gradient-to-br from-emerald-950/30 via-slate-900/60 to-slate-900/80 border border-emerald-500/20 rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between text-slate-400 text-xs pb-1">
+          <span>ค่าคอมมิชชันสะสม</span>
+          <i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i>
+        </div>
+        <div id="statEarnings" class="text-2xl font-black text-emerald-400 font-mono tracking-tight">0.00 ฿</div>
+        <div class="text-[10px] text-emerald-500/80 pt-1 flex items-center gap-1">
+          <i data-lucide="trending-up" class="w-3 h-3"></i> รหัสรับเงิน: an_15349720148
+        </div>
+      </div>
+
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between text-slate-400 text-xs pb-1">
+          <span>จำนวนคลิกลิงก์ (Clicks)</span>
+          <i data-lucide="mouse-pointer-click" class="w-4 h-4 text-indigo-400"></i>
+        </div>
+        <div id="statClicks" class="text-2xl font-black text-white font-mono tracking-tight">0</div>
+        <div class="text-[10px] text-slate-500 pt-1">คุกกี้จำ 7 วันทุกช่องทาง</div>
+      </div>
+
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between text-slate-400 text-xs pb-1">
+          <span>คำสั่งซื้อสำเร็จ (Orders)</span>
+          <i data-lucide="shopping-bag" class="w-4 h-4 text-amber-400"></i>
+        </div>
+        <div id="statOrders" class="text-2xl font-black text-white font-mono tracking-tight">0</div>
+        <div class="text-[10px] text-slate-500 pt-1">Shopee โอนเข้าบัญชีตรง</div>
+      </div>
+
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between text-slate-400 text-xs pb-1">
+          <span>โพสต์ที่กระจายแล้ว</span>
+          <i data-lucide="share-2" class="w-4 h-4 text-purple-400"></i>
+        </div>
+        <div id="statPosts" class="text-2xl font-black text-white font-mono tracking-tight">0</div>
+        <div class="text-[10px] text-slate-500 pt-1">Telegram • FB • X</div>
+      </div>
+
+    </section>
+
+    <!-- 3 Golden Hours Push Notification & Automation Hub -->
+    <section class="p-4 rounded-2xl bg-gradient-to-r from-amber-950/30 via-slate-900/90 to-indigo-950/40 border border-amber-500/30 shadow-xl space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex-shrink-0">
+            <i data-lucide="bell-ring" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-extrabold text-sm text-white">ระบบ Push Notification ดึงคนกลับเข้าแอป 3 ช่วงเวลาทอง</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40">24/7 AUTO-CONVERT</span>
+              <span id="pushPermissionBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">ตรวจสิทธิ์แจ้งเตือน...</span>
+            </div>
+            <p class="text-xs text-slate-300">แจ้งเตือนดึงคนกลับมาช้อป Shopee เด้งเปิดในแอปตรง พร้อม Sub-ID วัดผล และบรอดแคสต์เข้า Telegram</p>
+          </div>
+        </div>
+
+        <!-- Next Golden Hour Countdown & Controls -->
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="bg-slate-950/70 border border-amber-500/20 rounded-xl px-3.5 py-2 text-right">
+            <div class="text-[10px] text-slate-400">รอบเวลาทองถัดไป: <span id="nextGoldenHourName" class="text-amber-400 font-bold">11:50 น. (Flash Sale)</span></div>
+            <div class="text-xs font-mono font-bold text-white flex items-center gap-1 justify-end">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span id="nextGoldenHourCountdown">กำลังคำนวณ...</span>
+            </div>
+          </div>
+          <button id="enablePushPermBtn" class="hidden px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-amber-500/20">
+            <i data-lucide="bell" class="w-3.5 h-3.5 inline mr-1"></i>เปิดสิทธิ์แจ้งเตือน
+          </button>
+        </div>
+      </div>
+
+      <!-- 3 Golden Hours Status & Quick Test Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+        
+        <!-- 1. 23:55 Midnight Code Drop -->
+        <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-purple-500/40 transition space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+              <i data-lucide="moon" class="w-3.5 h-3.5"></i>
+              1. รอบ 23:55 น. (โค้ดดึก)
+            </span>
+            <span class="text-[10px] font-mono text-purple-300 px-2 py-0.5 rounded bg-purple-950/80 border border-purple-800/60 font-semibold">sub1=push_midnight_2355</span>
+          </div>
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            แจ้งเตือนโค้ดลดเที่ยงคืน 50%, โค้ดส่งฟรี 0.- และแคมเปญวันเบิ้ล (Payday / Double Day) ก่อนคนแย่งเก็บหมด
+          </p>
+          <button id="testPushMidnightBtn" class="w-full py-2 rounded-xl bg-purple-950/60 hover:bg-purple-900 border border-purple-700/50 text-purple-200 text-xs font-semibold transition flex items-center justify-center gap-1.5">
+            <i data-lucide="send" class="w-3 h-3"></i>
+            <span>ทดสอบแจ้งเตือนรอบ 23:55</span>
+          </button>
+        </div>
+
+        <!-- 2. 11:50 Lunch Flash Sale -->
+        <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-amber-500/40 transition space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+              <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+              2. รอบ 11:50 น. (พักเที่ยง)
+            </span>
+            <span class="text-[10px] font-mono text-amber-300 px-2 py-0.5 rounded bg-amber-950/80 border border-amber-800/60 font-semibold">sub1=push_lunch_1150</span>
+          </div>
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            Flash Sale 12:00 น. + โค้ดส่งฟรีเติมรอบเที่ยงวัน ของกิน ของใช้ ดีลราคาพิเศษช่วงคนว่างช้อป
+          </p>
+          <button id="testPushLunchBtn" class="w-full py-2 rounded-xl bg-amber-950/60 hover:bg-amber-900 border border-amber-700/50 text-amber-200 text-xs font-semibold transition flex items-center justify-center gap-1.5">
+            <i data-lucide="send" class="w-3 h-3"></i>
+            <span>ทดสอบแจ้งเตือนรอบ 11:50</span>
+          </button>
+        </div>
+
+        <!-- 3. 20:00 Golden Hour Evening Deals -->
+        <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-emerald-500/40 transition space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              3. รอบ 20:00 น. (นาทีทองหัวค่ำ)
+            </span>
+            <span class="text-[10px] font-mono text-emerald-300 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/60 font-semibold">sub1=push_evening_2000</span>
+          </div>
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            ดีลเด็ดช่วงพักผ่อนก่อนนอน สินค้าแบรนด์แท้ลดสูงสุด 80% คืนนี้เท่านั้น ป้ายยาปิดการขายประจำวัน
+          </p>
+          <button id="testPushEveningBtn" class="w-full py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-700/50 text-emerald-200 text-xs font-semibold transition flex items-center justify-center gap-1.5">
+            <i data-lucide="send" class="w-3 h-3"></i>
+            <span>ทดสอบแจ้งเตือนรอบ 20:00</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Shopee Product Offers Primary Source Bar -->
+    <div class="p-3.5 rounded-2xl bg-gradient-to-r from-orange-950/40 via-slate-900 to-indigo-950/40 border border-orange-500/30 flex flex-wrap items-center justify-between gap-3 text-xs shadow-lg">
+      <div class="flex items-center gap-3">
+        <span class="p-2.5 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
+          <i data-lucide="flame" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-extrabold text-orange-400">คลังหลัก: ข้อเสนอสินค้า (Product Offer)</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-500/20 text-orange-300 border border-orange-500/40">PRIMARY SOURCE</span>
+            <a href="https://affiliate.shopee.co.th/offer/product_offer" target="_blank" rel="noopener noreferrer" class="text-[10px] text-indigo-400 hover:text-indigo-300 underline flex items-center gap-1">
+              <span>affiliate.shopee.co.th/offer/product_offer</span>
+              <i data-lucide="external-link" class="w-2.5 h-2.5"></i>
+            </a>
+          </div>
+          <p class="text-[11px] text-slate-300">ดึงดีลสินค้าข้อเสนอพิเศษเป็นหลัก เรียงตามค่าคอมมิชชันและยอดขายสูงสุด พร้อมรูปตัวอย่างสินค้าจริง Shopee CDN</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <input type="file" id="productOfferCsvFileInput" accept=".csv" class="hidden">
+        <button id="importCsvBtn" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:opacity-90 text-white font-bold text-xs shadow-md shadow-orange-600/30 transition flex items-center gap-1.5">
+          <i data-lucide="file-up" class="w-3.5 h-3.5"></i>
+          <span>นำเข้า CSV ข้อเสนอสินค้า</span>
+        </button>
+        <button id="discoverDealsBtn" class="px-3 py-1.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold text-xs transition flex items-center gap-1.5">
+          <i data-lucide="compass" class="w-3.5 h-3.5"></i>
+          <span>ค้นหาดีลเพิ่ม</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Workspace: 3 Columns Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- Left Column: Agent Configuration (3 cols) -->
+      <div class="lg:col-span-3 space-y-4">
+        
+        <!-- Multi-channel Toggles -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 pb-2 border-b border-slate-800">
+            <i data-lucide="radio" class="w-4 h-4 text-emerald-400"></i>
+            ช่องทางที่ให้บอทโพสต์เอง
+          </h3>
+
+          <div class="space-y-2.5 text-xs">
+            <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700 transition">
+              <span class="flex items-center gap-2">
+                <i data-lucide="send" class="w-4 h-4 text-sky-400"></i>
+                <span>Telegram Channel</span>
+              </span>
+              <input type="checkbox" id="enableTgCheck" class="w-4 h-4 rounded text-emerald-500 bg-slate-900 border-slate-700">
+            </label>
+
+            <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700 transition">
+              <span class="flex items-center gap-2">
+                <i data-lucide="facebook" class="w-4 h-4 text-blue-400"></i>
+                <span>Facebook Page</span>
+              </span>
+              <input type="checkbox" id="enableFbCheck" class="w-4 h-4 rounded text-emerald-500 bg-slate-900 border-slate-700">
+            </label>
+
+            <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700 transition">
+              <span class="flex items-center gap-2">
+                <i data-lucide="twitter" class="w-4 h-4 text-slate-200"></i>
+                <span>X (Twitter)</span>
+              </span>
+              <input type="checkbox" id="enableTwCheck" class="w-4 h-4 rounded text-emerald-500 bg-slate-900 border-slate-700">
+            </label>
+          </div>
+          <p class="text-[10px] text-slate-500 italic">บอทจะส่งโพสต์ออกไปยังช่องทางที่ถูกติ๊กถูกโดยอัตโนมัติ</p>
+        </div>
+
+        <!-- Custom Deal Link Adder (Enhanced with Shopee CDN Auto-Resolver & Real Preview) -->
+        <div class="bg-gradient-to-br from-indigo-950/40 via-slate-900/80 to-slate-900 border border-indigo-500/30 rounded-2xl p-5 shadow-xl space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2 pb-1 border-b border-slate-800">
+            <i data-lucide="plus-circle" class="w-4 h-4 text-indigo-400"></i>
+            เพิ่มดีลใหม่จากลิงก์ Shopee
+          </h3>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            วางลิงก์สินค้า หรือลิงก์สั้น Shopee (เช่น <code>s.shopee.co.th/...</code>) ระบบจะตรวจสอบร้าน ดึงรูปจริง และสร้างโพสต์ให้อัตโนมัติ!
+          </p>
+
+          <div>
+            <label class="block text-[11px] font-medium text-slate-300 mb-1">ลิงก์ร้านค้า หรือสินค้า Shopee</label>
+            <input type="text" id="customDealUrlInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono outline-none focus:border-indigo-500 transition" placeholder="วางลิงก์ เช่น https://s.shopee.co.th/8plduEsNUw">
+          </div>
+
+          <!-- Live Match & Status Badge -->
+          <div id="dealMatchBadge" class="hidden text-[11px] p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 flex items-center justify-between">
+            <span id="dealMatchText" class="flex items-center gap-1.5 font-medium">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>ตรวจพบร้านค้า</span>
+            </span>
+            <span id="dealMatchRate" class="px-2 py-0.5 rounded font-mono font-bold bg-emerald-500/20 text-emerald-300 text-[10px]">15%</span>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-medium text-slate-300 mb-1">ชื่อสินค้า/จุดเด่น (หรือปล่อยว่างให้ระบบเติมอัตโนมัติ)</label>
+            <input type="text" id="customDealTitleInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500 transition" placeholder="ระบุชื่อสินค้า หรือปล่อยว่างไว้">
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-medium text-slate-300 mb-1">หมวดหมู่สินค้า</label>
+            <select id="customDealCategorySelect" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500 transition">
+              <option value="fashion">👕 เสื้อผ้า / แฟชั่น</option>
+              <option value="beauty">💄 เครื่องสำอาง / สกินแคร์ / ความงาม</option>
+              <option value="food">🍬 ขนม / ของกิน / อาหาร</option>
+              <option value="kids">🧸 ของเล่น / แม่และเด็ก</option>
+              <option value="home">🏠 ของใช้ในบ้าน / สเปรย์</option>
+              <option value="lifestyle" selected>🛍️ สินค้ายอดนิยม Shopee ทั่วไป</option>
+            </select>
+          </div>
+
+          <!-- Live Real Product Sample Photo Preview Card -->
+          <div id="customDealPreviewCard" class="hidden p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-center gap-3">
+            <div class="w-12 h-12 rounded-lg overflow-hidden border border-slate-700 bg-slate-900 flex-shrink-0 relative">
+              <img id="customDealPreviewImg" src="" alt="พรีวิวรูปสินค้า" class="w-full h-full object-cover">
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
+                <i data-lucide="shield-check" class="w-3 h-3 text-emerald-400"></i>
+                <span>รูปตัวอย่างสินค้าจริง Shopee CDN</span>
+              </div>
+              <div id="customDealPreviewTitle" class="text-xs text-white font-medium truncate pt-0.5">ชื่อสินค้า</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button id="fetchShopeeBtn" class="py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span>ตรวจสอบลิงก์</span>
+            </button>
+            <button id="addCustomDealBtn" class="py-2.5 bg-gradient-to-r from-emerald-600 via-indigo-600 to-purple-600 hover:opacity-90 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 transition flex items-center justify-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>เพิ่ม & โพสต์ทันที</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 pb-2 border-b border-slate-800">
+            <i data-lucide="sliders" class="w-4 h-4 text-indigo-400"></i>
+            ตั้งค่า Agent
+          </h3>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">รหัส Shopee Affiliate (Partner ID)</label>
+            <input type="text" id="affiliateTagInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono outline-none focus:border-indigo-500" value="an_15349720148">
+            <p class="text-[10px] text-slate-500 mt-1">ผูกเข้าบัญชีคุณอัตโนมัติ</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+              <span>เป้าหมายยอดขาย / กลยุทธ์</span>
+              <span class="text-[10px] text-amber-400 font-bold">เป้า 1,000฿+/วัน</span>
+            </label>
+            <select id="strategyModeSelect" class="w-full bg-slate-950 border border-amber-500/40 rounded-xl px-3 py-2 text-xs text-amber-300 font-semibold outline-none focus:border-amber-400">
+              <option value="profit_1000" selected>🎯 โหมดล่ากำไร 1,000฿/วัน (สลับดีลคอมสูง ฿50-฿1,700 กับของซื้อง่าย)</option>
+              <option value="high_ticket">💎 โหมดเน้นคอมมิชชันสูงสุด (High-Ticket Hero Products)</option>
+              <option value="volume_clicks">⚡ โหมดเน้นยอดคลิกดักคุกกี้ (High CTR Impulse Buying)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">สไตล์แคปชัน</label>
+            <select id="postStyleSelect" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500">
+              <option value="review">ป้ายยาจากใจคนใช้จริง (#ของดีบอกต่อ)</option>
+              <option value="flash_sale">ดีลลดราคาด่วน (#FlashSale)</option>
+              <option value="must_have">รวมไอเทมลับเด็กหอ/แม่และเด็ก</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">ความถี่ในการรันโพสต์</label>
+            <select id="intervalSelect" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500">
+              <option value="peak_hours">⏰ โหมดเวลาทองคำ (11:30, 18:00, 21:00, 00:00 Flash Sale)</option>
+              <option value="1800">ทุก 30 นาที</option>
+              <option value="3600" selected>ทุก 1 ชั่วโมง (แนะนำ)</option>
+              <option value="7200">ทุก 2 ชั่วโมง</option>
+              <option value="20">ทุก 20 วินาที (สำหรับทดสอบ)</option>
+            </select>
+          </div>
+
+          <button id="saveSettingsBtn" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition">
+            บันทึกรหัส Affiliate
+          </button>
+        </div>
+
+        <!-- Deals Inventory Summary -->
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 text-xs space-y-2">
+          <div class="flex justify-between items-center text-slate-400">
+            <span>คลังสินค้าดีลเด็ดในระบบ:</span>
+            <span id="dealsCountBadge" class="font-bold text-orange-400 font-mono">98 ข้อเสนอสินค้า + 18 ร้านค้า</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            🔥 <strong>ข้อเสนอสินค้า (Product Offer)</strong> จาก <span class="text-orange-300 font-mono">affiliate.shopee.co.th</span> เป็นคลังหลัก เรียงตามค่าคอมมิชชันและรายได้สูงสุด รูปตัวอย่างสินค้าจริง Shopee CDN 100%
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Center Column: Live Generated Post Feed (5 cols) -->
+      <div class="lg:col-span-5 space-y-4">
+        <div class="flex items-center justify-between px-1">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="rss" class="w-4 h-4 text-indigo-400"></i>
+            ฟีดโพสต์ที่ Agent กำลังสร้าง
+          </h3>
+          <span class="text-[11px] text-slate-500 font-mono">Live Feed</span>
+        </div>
+
+        <div id="postFeedContainer" class="space-y-4 max-h-[750px] overflow-y-auto pr-1">
+          <!-- Populated dynamically via app.js -->
+        </div>
+      </div>
+
+      <!-- Right Column: Agent Live Activity Log (4 cols) -->
+      <div class="lg:col-span-4 space-y-4">
+        
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+              Agent Multi-Channel Log
+            </h3>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          </div>
+
+          <div id="terminalLog" class="terminal-window rounded-xl p-3 h-[420px] overflow-y-auto space-y-1">
+            <!-- Log entries injected dynamically -->
+          </div>
+        </div>
+
+        <!-- Smart Queue & Anti-Suppression Monitor Card -->
+        <div class="bg-slate-900/80 border border-indigo-500/30 rounded-2xl p-4 space-y-3 shadow-lg">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <h4 class="text-xs font-bold text-indigo-400 flex items-center gap-1.5 uppercase tracking-wider">
+              <i data-lucide="layers" class="w-4 h-4"></i>
+              Smart Queue & Rate Limits
+            </h4>
+            <span id="queuePendingBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold">คิวว่าง (0 รายการ)</span>
+          </div>
+
+          <!-- Daily Quota Gauges -->
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800">
+              <div class="text-[10px] text-sky-400 font-semibold flex items-center justify-center gap-1">
+                <i data-lucide="send" class="w-2.5 h-2.5"></i> Telegram
+              </div>
+              <div id="quotaTgDisplay" class="text-sm font-black text-white font-mono pt-0.5">0/10</div>
+              <div class="text-[9px] text-slate-500">โควตาวันนี้</div>
+            </div>
+
+            <div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800">
+              <div class="text-[10px] text-slate-300 font-semibold flex items-center justify-center gap-1">
+                <i data-lucide="twitter" class="w-2.5 h-2.5"></i> X (Twitter)
+              </div>
+              <div id="quotaTwDisplay" class="text-sm font-black text-white font-mono pt-0.5">0/8</div>
+              <div class="text-[9px] text-slate-500">เว้น ≥1 ชม.</div>
+            </div>
+
+            <div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800">
+              <div class="text-[10px] text-blue-400 font-semibold flex items-center justify-center gap-1">
+                <i data-lucide="facebook" class="w-2.5 h-2.5"></i> FB Page
+              </div>
+              <div id="quotaFbDisplay" class="text-sm font-black text-white font-mono pt-0.5">0/5</div>
+              <div class="text-[9px] text-slate-500">เว้น ≥2 ชม.</div>
+            </div>
+          </div>
+
+          <p class="text-[10px] text-slate-400 leading-relaxed italic">
+            🛡️ ระบบหน่วงเวลาสุ่ม (Jitter 5–15 นาที) ป้องกันการโพสต์พร้อมกันและการติด Shadowban
+          </p>
+
+          <!-- Queue Items List -->
+          <div id="queueListContainer" class="max-h-32 overflow-y-auto space-y-1.5 text-[11px] pr-1">
+            <div class="p-2 rounded-lg bg-slate-950/50 border border-slate-800 text-[10px] text-slate-500 text-center">
+              ยังไม่มีโพสต์รอในคิว
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-1">
+            <button id="flushQueueBtn" class="flex-1 py-1.5 rounded-lg bg-indigo-950 hover:bg-indigo-900 border border-indigo-700/50 text-indigo-200 text-xs font-semibold transition flex items-center justify-center gap-1">
+              <i data-lucide="zap" class="w-3 h-3"></i>
+              <span>ส่งคิวทันที (Flush)</span>
+            </button>
+            <button id="clearQueueBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition">
+              ล้างคิว
+            </button>
+          </div>
+        </div>
+
+        <!-- Telegram Deal Finder & Auto-Reply Bot Card -->
+        <div class="bg-slate-900/80 border border-sky-500/30 rounded-2xl p-4 space-y-3 shadow-lg shadow-sky-950/20">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div id="tgBotBeacon" class="w-2.5 h-2.5 rounded-full bg-slate-500"></div>
+              <h4 class="text-xs font-bold text-sky-400 flex items-center gap-1.5">
+                <i data-lucide="bot" class="w-4 h-4 text-sky-400"></i>
+                Telegram Deal Finder Bot
+              </h4>
+            </div>
+            <span id="tgBotStatusText" class="text-[10px] font-mono font-bold text-slate-400 px-2 py-0.5 rounded bg-slate-800">
+              STANDBY
+            </span>
+          </div>
+
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            บอทตอบแชตอัตโนมัติ 24 ชม. เมื่อมีคนทักหรือถามหาสินค้าใน Telegram บอทจะค้นหาและส่ง <strong>ภาพจริง Shopee CDN + ลิงก์รับเงิน</strong> ให้ทันที!
+          </p>
+
+          <button id="tgBotToggleBtn" class="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-sky-600/30">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span>เปิดบอทตอบแชตอัตโนมัติ (Auto-Reply)</span>
+          </button>
+
+          <!-- Live Telegram Inquiries Feed -->
+          <div class="space-y-1.5 pt-2 border-t border-slate-800">
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span class="font-semibold flex items-center gap-1">
+                <i data-lucide="message-square" class="w-3 h-3 text-sky-400"></i> บันทึกการถาม-ตอบล่าสุด
+              </span>
+              <span id="inquiryCountBadge" class="text-[10px] font-mono text-sky-400 font-bold">0 รายการ</span>
+            </div>
+            <div id="tgInquiryLog" class="max-h-36 overflow-y-auto space-y-1.5 text-[11px] pr-1 font-mono text-slate-400">
+              <div class="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 text-[10px] text-slate-500 text-center">
+                ยังไม่มีข้อความเข้า (กดเปิดบอทเพื่อเริ่มตอบแชต)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guide Card -->
+        <div class="bg-gradient-to-br from-indigo-950/40 via-slate-900/60 to-slate-900/80 border border-indigo-500/20 rounded-2xl p-4 space-y-2.5">
+          <h4 class="text-xs font-bold text-indigo-400 flex items-center gap-1.5">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i>
+            รูปสินค้า + แคปชั่น + ร้านค้า ตรงกัน 100%
+          </h4>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            คลังสินค้าคัดเลือกจากร้านค้าค่าคอมมิชชันสูงสุดในระบบ ทุกโพสต์ใช้ <strong>รูปตัวอย่างสินค้าจริง</strong> ตรวจสอบชื่อรุ่น คุณสมบัติ และลิงก์ร้านค้าตรงกันทั้งหมดแล้วครับ!
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Settings Modal (All 3 Channels Credentials & Reset) -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="settings" class="w-4 h-4 text-indigo-400"></i>
+          ตั้งค่าระบบ & ช่องทางกระจายโพสต์
+        </h3>
+        <button id="closeSettingsBtn" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- 1. Telegram Settings -->
+      <div class="space-y-2.5 pt-2 border-t border-slate-800">
+        <h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+          1. Telegram Channel
+        </h4>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Bot Token</label>
+            <input type="password" id="tgTokenInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500 font-mono" placeholder="123456:ABC-DEF...">
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Channel ID</label>
+            <input type="text" id="tgChannelInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500 font-mono" placeholder="@your_deals_th">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">ลิงก์ชวนคนเข้าช่อง Telegram (Channel Link สำหรับโพสต์ดึงคนเข้ากลุ่ม)</label>
+            <input type="text" id="tgChannelUrlInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-sky-300 outline-none focus:border-indigo-500 font-mono" placeholder="https://t.me/your_deals_channel">
+            <p class="text-[10px] text-slate-500 mt-0.5">ระบบจะนำลิงก์นี้ไปใส่ในโพสต์ Facebook & X อัตโนมัติ เพื่อดึงคนเข้ากลุ่ม Telegram</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Facebook Page Settings -->
+      <div class="space-y-2.5 pt-2 border-t border-slate-800">
+        <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="facebook" class="w-3.5 h-3.5"></i>
+            2. Facebook Page (Sud soi slowbar)
+          </span>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">ID: 106756152526353</span>
+        </h4>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Page ID</label>
+            <input type="text" id="fbPageIdInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500 font-mono" placeholder="106756152526353" value="106756152526353">
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Page Access Token</label>
+            <input type="password" id="fbTokenInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500 font-mono" placeholder="EAA...">
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. X (Twitter) Settings -->
+      <div class="space-y-2.5 pt-2 border-t border-slate-800">
+        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+          <i data-lucide="twitter" class="w-3.5 h-3.5"></i>
+          3. X (Twitter) / Universal Webhook
+        </h4>
+        <div>
+          <label class="block text-[11px] font-medium text-slate-400 mb-1">Webhook URL (Make.com / Relay)</label>
+          <input type="text" id="twWebhookInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500 font-mono" placeholder="https://hook.eu1.make.com/xxxx" value="https://hook.eu1.make.com/xvkd3je4qvpbt21d74vx7o3uww7sercb">
+        </div>
+        <div>
+          <label class="block text-[11px] font-medium text-slate-400 mb-1">หรือ Twitter Bearer Token</label>
+          <input type="password" id="twBearerInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500 font-mono" placeholder="AAAAAAAAAAAAAAAAAAAAA...">
+        </div>
+      </div>
+
+      <!-- LLM Model & AI Brain Settings -->
+      <div class="space-y-3 pt-2 border-t border-slate-800">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+            4. สมองกล AI อัจฉริยะ (Telegram Bot & Auto-Post LLM)
+          </h4>
+          <span class="text-[10px] text-emerald-400 font-mono font-semibold">SMART BRAIN</span>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-medium text-slate-300 mb-1">เลือกโมเดล AI (LLM Model)</label>
+          <select id="aiModelSelect" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-amber-300 font-semibold outline-none focus:border-indigo-500">
+            <option value="gemini-2.5-flash" selected>⚡ Google Gemini 2.5 Flash (แนะนำ - ฉลาดที่สุด ตอบไว สไตล์เพื่อนสนิทป้ายยา)</option>
+            <option value="gemini-2.0-flash">🚀 Google Gemini 2.0 Flash (เสถียร รวดเร็ว)</option>
+            <option value="deepseek/deepseek-chat">🧠 DeepSeek V3 (ผ่าน OpenRouter API)</option>
+            <option value="openai/gpt-4o-mini">✨ OpenAI GPT-4o-mini (ผ่าน OpenRouter API)</option>
+          </select>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-[11px] font-medium text-slate-300">API Key</label>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-[10px] text-indigo-400 hover:underline flex items-center gap-1">
+              <span>กดรับ Gemini Key ฟรีคลิกที่นี่</span> <i data-lucide="external-link" class="w-2.5 h-2.5"></i>
+            </a>
+          </div>
+          <input type="password" id="geminiKeyInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500 font-mono" placeholder="AIzaSy... (หรือ OpenRouter sk-or-...)">
+          <p class="text-[10px] text-slate-500 mt-1">
+            ใส่ Key เพื่อให้บอทใน Telegram คุยตอบลูกค้าได้อย่างชาญฉลาด ตอบทุกข้อสงสัย และป้ายยาปิดการขายอัตโนมัติ (หากไม่ใส่ จะใช้ Smart Shopper Engine)
+          </p>
+        </div>
+      </div>
+
+      <!-- Reset Stats Section -->
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+        <button id="resetStatsBtn" type="button" class="px-3 py-1.5 bg-rose-950/60 hover:bg-rose-900 border border-rose-800/80 text-rose-300 rounded-xl text-xs font-medium transition flex items-center gap-1.5">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span>เคลียร์แดชบอร์ด & รีเซ็ตสถิติเป็น 0</span>
+        </button>
+
+        <button id="saveAllSettingsBtn" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-600/30">
+          บันทึกการตั้งค่า
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deep Link & Sub-ID Modal -->
+  <div id="deepLinkModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            <i data-lucide="zap" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">เครื่องมือสร้าง Deep Link & Sub-ID Tracking Matrix</h3>
+            <p class="text-[11px] text-slate-400">แปลงลิงก์ให้เด้งเข้าแอป Shopee โดยตรง หลีกเลี่ยง In-app WebView</p>
+          </div>
+        </div>
+        <button id="closeDeepLinkModalBtn" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Deep Link Generator Box -->
+      <div class="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
+        <h4 class="text-xs font-bold text-amber-400 flex items-center gap-1.5 uppercase tracking-wider">
+          <i data-lucide="link" class="w-3.5 h-3.5"></i> 1. แปลงลิงก์ Shopee เป็น Mobile Deep Link
+        </h4>
+        <div>
+          <label class="block text-[11px] font-medium text-slate-300 mb-1">วางลิงก์สินค้า หรือลิงก์สั้น Shopee</label>
+          <input type="text" id="deepLinkInputUrl" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono outline-none focus:border-amber-400" placeholder="เช่น https://s.shopee.co.th/8plduEsNUw">
+        </div>
+        <div>
+          <label class="block text-[11px] font-medium text-slate-300 mb-1">เลือกจุดคลิก (Sub-ID Placement)</label>
+          <select id="deepLinkSubIdSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-amber-300 font-semibold outline-none focus:border-amber-400">
+            <option value="push_midnight_2355">⏰ push_midnight_2355 (แจ้งเตือนรอบดึก 23:55 น.)</option>
+            <option value="push_lunch_1150">🍱 push_lunch_1150 (แจ้งเตือนรอบเที่ยง 11:50 น.)</option>
+            <option value="push_evening_2000">✨ push_evening_2000 (แจ้งเตือนรอบค่ำ 20:00 น.)</option>
+            <option value="telegram_bot">🤖 telegram_bot (น้องดีลลี่ตอบแชต Telegram)</option>
+            <option value="telegram_channel">📢 telegram_channel (โพสต์ในช่อง Telegram)</option>
+            <option value="facebook_post">📘 facebook_post (โพสต์เพจ Facebook)</option>
+            <option value="twitter_post">🐦 twitter_post (โพสต์บน X / Twitter)</option>
+            <option value="home_banner">🏠 home_banner (แบนเนอร์หน้าแรก)</option>
+            <option value="search_result">🔍 search_result (ผลการค้นหาดีล)</option>
+          </select>
+        </div>
+        <button id="generateDeepLinkBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:opacity-90 text-white font-bold text-xs transition shadow-md shadow-amber-500/20 flex items-center justify-center gap-1.5">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          <span>สร้าง Mobile Deep Link ทันที</span>
+        </button>
+
+        <!-- Generated Result Outputs -->
+        <div id="deepLinkResultsCard" class="hidden space-y-2.5 pt-2 border-t border-slate-800 text-xs">
+          <div>
+            <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+              <span class="font-bold text-orange-400 flex items-center gap-1">
+                <i data-lucide="smartphone" class="w-3 h-3"></i> 1. Shopee App URL Scheme (เด้งเปิดแอปทันที)
+              </span>
+              <button id="copySchemeBtn" class="text-indigo-400 hover:underline text-[10px]">คัดลอก</button>
+            </div>
+            <input type="text" id="outSchemeUrl" readonly class="w-full bg-slate-900/80 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-orange-300 font-mono outline-none">
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+              <span class="font-bold text-emerald-400 flex items-center gap-1">
+                <i data-lucide="shield-check" class="w-3 h-3"></i> 2. Universal Smart Bridge (หลบ In-app WebView)
+              </span>
+              <button id="copyBridgeBtn" class="text-indigo-400 hover:underline text-[10px]">คัดลอก</button>
+            </div>
+            <input type="text" id="outBridgeUrl" readonly class="w-full bg-slate-900/80 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-emerald-300 font-mono outline-none">
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+              <span class="font-bold text-indigo-400 flex items-center gap-1">
+                <i data-lucide="link-2" class="w-3 h-3"></i> 3. ลิงก์ Affiliate พร้อม Sub-ID วัดผล
+              </span>
+              <button id="copyAffUrlBtn" class="text-indigo-400 hover:underline text-[10px]">คัดลอก</button>
+            </div>
+            <input type="text" id="outAffUrl" readonly class="w-full bg-slate-900/80 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-indigo-300 font-mono outline-none">
+          </div>
+
+          <div class="pt-1 flex gap-2">
+            <a id="testOpenDeepLinkBtn" href="#" target="_blank" class="flex-1 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-center text-xs transition">
+              🚀 ทดสอบเปิดเข้าแอป Shopee
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-ID Tracking Matrix Reference Table -->
+      <div class="space-y-2">
+        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+          <i data-lucide="table" class="w-3.5 h-3.5 text-indigo-400"></i> 2. แผนผัง Sub-ID สำคัญในระบบ (Shopee Tracking Matrix)
+        </h4>
+        <div class="rounded-xl border border-slate-800 overflow-hidden text-xs">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-950 text-[10px] text-slate-400 uppercase font-bold border-b border-slate-800">
+              <tr>
+                <th class="p-2.5">จุดคลิก / ฟีเจอร์</th>
+                <th class="p-2.5">Sub-ID Parameter</th>
+                <th class="p-2.5">การแสดงผลใน Shopee Report</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/80 text-[11px] text-slate-300">
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-2.5 font-medium text-purple-300">แจ้งเตือนรอบดึก 23:55 น.</td>
+                <td class="p-2.5 font-mono text-purple-400">push_midnight_2355</td>
+                <td class="p-2.5 text-slate-400">ยอดซื้อจากโค้ดลดรอบเที่ยงคืน</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-2.5 font-medium text-amber-300">แจ้งเตือนพักเที่ยง 11:50 น.</td>
+                <td class="p-2.5 font-mono text-amber-400">push_lunch_1150</td>
+                <td class="p-2.5 text-slate-400">ยอดซื้อจาก Flash Sale พักเที่ยง</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-2.5 font-medium text-emerald-300">แจ้งเตือนหัวค่ำ 20:00 น.</td>
+                <td class="p-2.5 font-mono text-emerald-400">push_evening_2000</td>
+                <td class="p-2.5 text-slate-400">ยอดซื้อนาทีทองช่วงพักผ่อน</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-2.5 font-medium text-sky-300">บอท Telegram คุยแชต</td>
+                <td class="p-2.5 font-mono text-sky-400">telegram_bot</td>
+                <td class="p-2.5 text-slate-400">ลูกค้ารายบุคคลคุยถามกับ AI</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-2.5 font-medium text-blue-300">โพสต์ Auto-Pilot ในช่อง</td>
+                <td class="p-2.5 font-mono text-blue-400">telegram_channel / auto_pilot_post</td>
+                <td class="p-2.5 text-slate-400">ยอดซื้อจากโพสต์บรอดแคสต์อัตโนมัติ</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Initial Users Growth Toolkit Modal -->
+  <div id="growthToolkitModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-gradient-to-tr from-pink-600 to-purple-600 text-white shadow-md">
+            <i data-lucide="rocket" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">ศูนย์กลยุทธ์หาคนใช้งานกลุ่มแรก (Initial Users Growth Toolkit)</h3>
+            <p class="text-[11px] text-slate-400">สคริปต์คลิปไวรัล TikTok/Reels และเทมเพลตเจาะกลุ่มคนล่าส่วนลด</p>
+          </div>
+        </div>
+        <button id="closeGrowthToolkitModalBtn" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Section 1: TikTok / Reels Scripts -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="video" class="w-3.5 h-3.5"></i> 1. สคริปต์คลิปสั้น TikTok / Reels (15–30 วินาที)
+          </h4>
+          <span class="text-[10px] text-slate-400">เน้นแก้ Pain Point โค้ดหมดไว</span>
+        </div>
+
+        <!-- Script 1 -->
+        <div class="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white">🎬 สคริปต์ที่ 1: "แอปช่วยเฝ้าโค้ดลด ไม่ต้องนั่งรีเฟรชเอง"</span>
+            <button class="copy-script-btn px-2.5 py-1 rounded-lg bg-pink-950 border border-pink-700/60 text-pink-300 text-[10px] font-semibold hover:bg-pink-900 transition" data-target="script1">
+              คัดลอกสคริปต์
+            </button>
+          </div>
+          <div id="script1" class="space-y-1 text-slate-300 text-[11px] leading-relaxed font-sans bg-slate-900/50 p-2.5 rounded-xl border border-slate-800">
+            <p><span class="text-pink-400 font-bold">[0-3 วิ Hook]:</span> "ใครยังนั่งถ่างตารีเฟรชรอเก็บโค้ด Shopee เที่ยงคืนเองอยู่... หยุดก่อนเลย!"</p>
+            <p><span class="text-indigo-400 font-bold">[3-15 วิ Demo]:</span> "ตอนนี้มีแอป/บอทช่วยเฝ้าโค้ดให้แล้ว พอถึงเวลา 23:55 น. หรือ 11:50 น. มันจะยิง Notification แจ้งเตือนเข้ามือถือทันที กดปุ๊บเด้งเข้าแอป Shopee พร้อมใส่โค้ดลด 50% ให้เลย ไม่ต้องกลัวหลุด"</p>
+            <p><span class="text-emerald-400 font-bold">[15-25 วิ Value]:</span> "แถมมีบอทใน Telegram อยากได้สินค้าอะไรแค่พิมพ์บอก มันหาดีลลดราคาถูกสุดพร้อมส่งพิกัดของแท้ให้ใน 2 วินาที"</p>
+            <p><span class="text-amber-400 font-bold">[25-30 วิ CTA]:</span> "ลองใช้ฟรีได้แล้ววันนี้ ลิงก์เข้าใช้งานกดที่หน้าโปรไฟล์ได้เลยครับ!"</p>
+          </div>
+        </div>
+
+        <!-- Script 2 -->
+        <div class="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white">🎬 สคริปต์ที่ 2: "ความลับคนกดโค้ดลด 50% ทันทุก Double Day"</span>
+            <button class="copy-script-btn px-2.5 py-1 rounded-lg bg-pink-950 border border-pink-700/60 text-pink-300 text-[10px] font-semibold hover:bg-pink-900 transition" data-target="script2">
+              คัดลอกสคริปต์
+            </button>
+          </div>
+          <div id="script2" class="space-y-1 text-slate-300 text-[11px] leading-relaxed font-sans bg-slate-900/50 p-2.5 rounded-xl border border-slate-800">
+            <p><span class="text-pink-400 font-bold">[0-3 วิ Hook]:</span> "ทำไมคนอื่นกดโค้ดส่งฟรี 0 บาท กับโค้ดลด 50% ทัน แต่เรากดไม่เคยทันสักที?"</p>
+            <p><span class="text-indigo-400 font-bold">[3-15 วิ Demo]:</span> "เพราะเขามีระบบเตือนล่วงหน้า 5 นาทีตรงเป๊ะ ทั้งรอบเที่ยงคืน และรอบพักเที่ยง 12:00 น. ไม่ต้องคอยตั้งนาฬิกาปลุกเอง"</p>
+            <p><span class="text-amber-400 font-bold">[15-30 วิ CTA]:</span> "ใครอยากได้เครื่องมือเฝ้าโค้ดฟรี เข้าไปกดรับการแจ้งเตือนได้เลย ลิงก์แปะไว้ใน Bio แล้วน้า"</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Facebook Groups Sharing -->
+      <div class="space-y-3 pt-2 border-t border-slate-800">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="users" class="w-3.5 h-3.5"></i> 2. เทมเพลตแชร์ในกลุ่มหาส่วนลด & กลุ่มไอที (Utility Tool Framing)
+          </h4>
+          <span class="text-[10px] text-slate-400">เน้นแชร์เครื่องมือฟรี ไม่สแปม</span>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white">📘 ข้อความแชร์ในกลุ่ม "คนรักส่วนลด Shopee / กลุ่มแบ่งปันโค้ด"</span>
+            <button class="copy-script-btn px-2.5 py-1 rounded-lg bg-sky-950 border border-sky-700/60 text-sky-300 text-[10px] font-semibold hover:bg-sky-900 transition" data-target="groupPost1">
+              คัดลอกโพสต์
+            </button>
+          </div>
+          <div id="groupPost1" class="text-slate-300 text-[11px] leading-relaxed font-sans bg-slate-900/50 p-2.5 rounded-xl border border-slate-800 whitespace-pre-line">
+สวัสดีครับเพื่อนๆ สายช้อป 🙏 พอดีผมเขียนเว็บ/บอทช่วยเฝ้าโค้ดลด Shopee ขึ้นมาใช้เอง แล้วเห็นว่ามีประโยชน์เลยเอามาแบ่งปันครับ (ใช้งานฟรี 100% ไม่มีค่าใช้จ่าย)
+
+ฟีเจอร์หลักๆ:
+⏰ มีระบบ Push แจ้งเตือนล่วงหน้า 5 นาทีก่อนโค้ดปล่อย (รอบดึก 23:55 น., รอบเที่ยง 11:50 น., รอบค่ำ 20:00 น.) ไม่ต้องนั่งรีเฟรชเอง
+🚀 แตะแจ้งเตือนแล้วเด้งเปิดในแอป Shopee ทันที กดเก็บโค้ดได้เลย
+🤖 มีบอทใน Telegram ถามหาสินค้าอะไร พิมพ์บอกชื่อรุ่น มันจะช่วยเทียบราคาและหาดีลที่คุ้มที่สุดให้
+
+ใครสนใจลองกดใช้งานดูได้เลยครับ: [ใส่ลิงก์ของคุณที่นี่]
+หวังว่าจะช่วยให้ทุกคนเก็บโค้ดทันกันนะครับ! 😊
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Profile Bio Link -->
+      <div class="space-y-2 pt-2 border-t border-slate-800">
+        <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+          <i data-lucide="bookmark" class="w-3.5 h-3.5"></i> 3. ข้อความใส่หน้าโปรไฟล์ (Bio Template for TikTok / IG)
+        </h4>
+        <div class="flex items-center gap-2">
+          <input type="text" id="bioLinkInput" readonly value="⚡ เครื่องมือเฝ้าโค้ดลด Shopee อัตโนมัติ & บอทค้นหาดีล 24 ชม. ฟรี 👉" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none">
+          <button id="copyBioBtn" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition">
+            คัดลอก
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/product-offers-db.js"></script>
+  <script src="js/deals-db.js"></script>
+  <script src="js/ai-agent.js"></script>
+  <script src="js/multi-publisher.js"></script>
+  <script src="js/telegram-bot.js"></script>
+  <script src="js/notification-service.js"></script>
+  <script src="js/queue-manager.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

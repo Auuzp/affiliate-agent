@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>กำลังเปิดในแอป Shopee...</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+            heading: ['Kanit', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .pulsing-shopee {
+      animation: pulse-ring 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen flex flex-col items-center justify-center p-4 selection:bg-orange-500 selection:text-white">
+
+  <div class="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-6 relative overflow-hidden backdrop-blur-md">
+    
+    <!-- Background Glow -->
+    <div class="absolute -top-24 -left-24 w-48 h-48 bg-orange-500/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+    <!-- Shopee App Icon with Pulsing Effect -->
+    <div class="relative mx-auto w-20 h-20">
+      <div class="absolute inset-0 rounded-2xl bg-gradient-to-tr from-orange-600 to-amber-500 pulsing-shopee blur-sm"></div>
+      <div class="relative w-full h-full rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center shadow-xl shadow-orange-500/30">
+        <svg class="w-11 h-11 text-white" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h14v12zm-7-8c-1.66 0-3-1.34-3-3H7c0 2.76 2.24 5 5 5s5-2.24 5-5h-2c0 1.66-1.34 3-3 3z"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs font-semibold">
+        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+        <span>SHOPEE DEEP LINK ENGINE</span>
+      </div>
+      <h1 class="text-xl font-bold font-heading text-white">กำลังเปิดในแอป Shopee โดยตรง</h1>
+      <p id="statusDesc" class="text-xs text-slate-400 leading-relaxed">
+        ระบบกำลังพาคุณข้ามไปเปิดที่แอป Shopee เพื่อรับสิทธิ์โค้ดลดและส่งฟรีด้วยบัญชีของคุณอัตโนมัติ...
+      </p>
+    </div>
+
+    <!-- In-App Browser Escape Notice (Shown if detected LINE/FB) -->
+    <div id="inAppNotice" class="hidden text-left p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-xs space-y-1 text-amber-200">
+      <div class="font-bold flex items-center gap-1.5 text-amber-300">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
+        <span>ตรวจพบว่าเปิดผ่านเบราว์เซอร์ในแอป</span>
+      </div>
+      <p class="text-[11px] text-slate-300">
+        หากไม่เด้งเข้าแอป Shopee ให้กด <span class="text-white font-bold">จุด 3 จุด (...)</span> มุมขวาบน ➡️ เลือก <span class="text-white font-bold">"เปิดในเบราว์เซอร์ภายนอก / Safari / Chrome"</span>
+      </p>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="space-y-2.5 pt-2">
+      <a id="openAppBtn" href="#" class="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:opacity-95 text-white font-bold text-sm shadow-xl shadow-orange-500/30 flex items-center justify-center gap-2 transition active:scale-98">
+        <i data-lucide="external-link" class="w-4 h-4"></i>
+        <span>🚀 เปิดในแอป Shopee ทันที (แนะนำ)</span>
+      </a>
+
+      <a id="continueWebBtn" href="#" class="w-full py-2.5 px-4 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center justify-center gap-1.5 transition">
+        <span>ดำเนินการต่อบนเว็บไซต์ (หากยังไม่ได้ลงแอป)</span>
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+      </a>
+    </div>
+
+    <div class="pt-2 border-t border-slate-800/80 text-[11px] text-slate-500 flex items-center justify-center gap-2">
+      <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+      <span>ระบบจำคุกกี้ Affiliate ครบถ้วน 100%</span>
+    </div>
+
+  </div>
+
+  <script>
+    // ดึงพารามิเตอร์ target และ sub1
+    const params = new URLSearchParams(window.location.search);
+    let targetUrl = params.get('target') || 'https://shopee.co.th';
+    const sub1 = params.get('sub1') || 'deep_link_bridge';
+
+    // ตรวจสอบว่า targetUrl มี Sub-ID หรือไม่
+    try {
+      const parsed = new URL(targetUrl);
+      if (!parsed.searchParams.has('sub1') && !parsed.searchParams.has('sub_id')) {
+        parsed.searchParams.set('sub_id', sub1);
+        parsed.searchParams.set('sub1', sub1);
+        parsed.searchParams.set('af_sub1', sub1);
+        targetUrl = parsed.toString();
+      }
+    } catch (e) {
+      // url decode fallback
+    }
+
+    // Shopee Deep Link Schemes
+    const deepLinkUrl = `shopeeth://open?url=${encodeURIComponent(targetUrl)}`;
+    const androidIntentUrl = `intent://open?url=${encodeURIComponent(targetUrl)}#Intent;scheme=shopeeth;package=com.shopee.th;end`;
+
+    // DOM Elements
+    const openAppBtn = document.getElementById('openAppBtn');
+    const continueWebBtn = document.getElementById('continueWebBtn');
+    const inAppNotice = document.getElementById('inAppNotice');
+    const statusDesc = document.getElementById('statusDesc');
+
+    continueWebBtn.href = targetUrl;
+
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    const isAndroid = /Android/.test(ua);
+    const isInApp = /Line|FBAN|FBAV|Instagram|Twitter|Telegram/i.test(ua);
+
+    if (isInApp) {
+      inAppNotice.classList.remove('hidden');
+    }
+
+    const appLaunchUrl = isAndroid ? androidIntentUrl : deepLinkUrl;
+    openAppBtn.href = appLaunchUrl;
+
+    openAppBtn.addEventListener('click', (e) => {
+      // Fallback timer หากแอปไม่เด้ง
+      setTimeout(() => {
+        window.location.href = targetUrl;
+      }, 2500);
+    });
+
+    // Auto-launch บนมือถือทันที
+    if (isIOS || isAndroid) {
+      statusDesc.textContent = 'กำลังเรียกแอป Shopee... หากไม่มีอะไรเกิดขึ้น กรุณากดปุ่มสีส้มด้านล่าง';
+      
+      // ทดลองเปิด Deep Link ทันที
+      window.location.href = appLaunchUrl;
+
+      // Fallback ไปยังเว็บหากไม่มีแอปหลังจากผ่านไป 2 วินาที
+      setTimeout(() => {
+        if (!document.hidden) {
+          statusDesc.textContent = 'หากแอปไม่เปิดอัตโนมัติ ให้กดปุ่มด้านล่างเพื่อช้อปได้ทันทีครับ';
+        }
+      }, 1800);
+    } else {
+      // Desktop: Redirect ตรงไปยัง Web Store
+      statusDesc.textContent = 'กำลังนำคุณไปยังหน้าร้านค้า Shopee...';
+      setTimeout(() => {
+        window.location.href = targetUrl;
+      }, 800);
+    }
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>

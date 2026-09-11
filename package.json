@@ -1,0 +1,30 @@
+{
+  "name": "affiliate-pilot-ai",
+  "version": "2.0.0",
+  "description": "Production-Grade Shopee Affiliate AI Agent with Telegram Webhook, Multi-Platform Anti-Suppression, and 24/7 Automation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node -e \"console.log('Testing Node.js runtime: OK')\""
+  },
+  "keywords": [
+    "shopee",
+    "affiliate",
+    "telegram-bot",
+    "facebook-page",
+    "twitter-bot",
+    "gemini-ai",
+    "automation",
+    "graphql"
+  ],
+  "author": "Antigravity AI",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "node-cron": "^3.0.3"
+  }
+}
