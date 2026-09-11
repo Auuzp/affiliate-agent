@@ -12,7 +12,7 @@ services:
       - key: PORT
         value: 3000
       - key: WEBHOOK_RELAY_URL
-        sync: false
+        value: "https://hook.eu1.make.com/03af6d4heuc2qg4g11ijn9lq8llsla8t"
       - key: FACEBOOK_PAGE_ID
         value: "106756152526353"
       - key: TELEGRAM_BOT_TOKEN

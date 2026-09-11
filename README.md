@@ -2,6 +2,8 @@
 
 ระบบตัวแทน AI อัตโนมัติสำหรับบริหารจัดการและเผยแพร่คอนเทนต์ **Shopee Affiliate** ครอบคลุมหลายช่องทาง (**Facebook Page, Telegram Channel, X / Twitter**) ตลอด 24 ชั่วโมง พร้อมระบบหน่วงเวลาแบบกระจายธรรมชาติ (Anti-Suppression Jitter Queue) และระบบดักเวลาทองคำ (Golden Hours Cron)
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Auuzp/affiliate-agent)
+
 ---
 
 ## 🌟 จุดเด่นของระบบ (Core Highlights)
