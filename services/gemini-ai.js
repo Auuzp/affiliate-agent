@@ -207,7 +207,11 @@ Pain Point: "${painPoint.hook}"
     }
 
     // Default friendly response
-    const text = `น้องดีลลี่หาพิกัดให้แล้วครับคุณ ${senderName}! 🎉\n\nแนะนำตัวนี้เลยครับ: **"${primaryDeal.title}"**\nจากร้านทางการ **${primaryDeal.shopName}** ยอดขายไปแล้วกว่า ${primaryDeal.soldCount}\n\n💰 พิเศษตอนนี้ลดเหลือเพียง **฿${primaryDeal.salePrice.toLocaleString()}.-** (${primaryDeal.discount})\n\nกดดูรายละเอียดหรือสั่งซื้อที่ปุ่มด้านล่างนี้ได้ทันทีเลยครับ 👇`;
+    const soldProof = (primaryDeal.soldCount && primaryDeal.soldCount !== '0' && primaryDeal.soldCount !== 0)
+      ? ` ยอดขายไปแล้วกว่า ${primaryDeal.soldCount}`
+      : ' การันตีสินค้าของแท้ 100%';
+
+    const text = `น้องดีลลี่หาพิกัดให้แล้วครับคุณ ${senderName}! 🎉\n\nแนะนำตัวนี้เลยครับ: **"${primaryDeal.title}"**\nจากร้านทางการ **${primaryDeal.shopName}**${soldProof}\n\n💰 พิเศษตอนนี้ลดเหลือเพียง **฿${primaryDeal.salePrice.toLocaleString()}.-** (${primaryDeal.discount})\n\nกดดูรายละเอียดหรือสั่งซื้อที่ปุ่มด้านล่างนี้ได้ทันทีเลยครับ 👇`;
 
     return { text, deal: primaryDeal };
   }

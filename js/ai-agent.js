@@ -887,10 +887,14 @@ ${tags}`;
     }
 
     if (q.includes('แฟน') || q.includes('ขวัญ') || q.includes('วันเกิด') || q.includes('แนะนำ')) {
+      const salesMention = (deal.soldCount && deal.soldCount !== '0' && deal.soldCount !== 0)
+        ? `ยอดขายไปแล้วกว่า ${deal.soldCount}`
+        : 'สินค้าของแท้ 100% คัดเกรดพรีเมียม';
+
       return `ถ้ากำลังมองหาของขวัญโดนใจ คุณภาพดี น้องดีลลี่ขอป้ายยาตัวนี้เลยครับคุณ ${senderName}! 🎁✨
 
 "${deal.title}" (ร้าน ${deal.shopName})
-บอกเลยว่าใครได้รับไปก็ต้องชอบแน่นอน เพราะใช้งานได้จริงในชีวิตประจำวัน ยอดขายไปแล้วกว่า ${deal.soldCount} คะแนนรีวิวสูงถึง ${deal.rating}/5 ดาว ดีไซน์สวย ทันสมัย และคุณภาพเกินราคามากครับ
+บอกเลยว่าใครได้รับไปก็ต้องชอบแน่นอน เพราะใช้งานได้จริงในชีวิตประจำวัน ${salesMention} คะแนนรีวิวสูงถึง ${deal.rating}/5 ดาว ดีไซน์สวย ทันสมัย และคุณภาพเกินราคามากครับ
 
 ตอนนี้ร้านจัดโปรพิเศษลดเหลือแค่ ฿${deal.salePrice.toLocaleString()}.- (ปกติ ฿${deal.originalPrice.toLocaleString()}.-) เท่านั้นครับ
 
@@ -898,13 +902,17 @@ ${tags}`;
     }
 
     // บริบททั่วไป (Friendly Conversational Shopper)
+    const salesProof = (deal.soldCount && deal.soldCount !== '0' && deal.soldCount !== 0)
+      ? `การันตียอดขายแล้วกว่า ${deal.soldCount} `
+      : 'สินค้าของแท้ 100% มั่นใจได้ ';
+
     return `สวัสดีครับคุณ ${senderName}! กำลังเล็งตัวนี้อยู่ใช่ไหมครับ ดีลนี้คุ้มมากเลยน้า 💖
 
 น้องดีลลี่ขอแนะนำ "${deal.title}" จากร้าน ${deal.shopName}
 จุดเด่นที่ทำให้รุ่นนี้น่าใช้มาก:
 ${deal.features ? deal.features.map(f => `• ${f}`).join('\n') : '• คุณภาพเกรดพรีเมียม การันตีของแท้ 100%'}
 
-การันตียอดขายแล้วกว่า ${deal.soldCount} รีวิวเฉลี่ยสูงถึง ${deal.rating}/5 ดาว ตอนนี้กำลังลดราคาเหลือแค่ ฿${deal.salePrice.toLocaleString()}.- (จากปกติ ฿${deal.originalPrice.toLocaleString()}.-) 💥 ${deal.discount}
+${salesProof}รีวิวเฉลี่ยสูงถึง ${deal.rating}/5 ดาว ตอนนี้กำลังลดราคาเหลือแค่ ฿${deal.salePrice.toLocaleString()}.- (จากปกติ ฿${deal.originalPrice.toLocaleString()}.-) 💥 ${deal.discount}
 
 🛒 พิกัดร้านแท้สั่งตรงนี้ได้เลยครับผม 👉 ${affiliateUrl}`;
   }

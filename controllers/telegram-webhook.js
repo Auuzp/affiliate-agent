@@ -8,6 +8,8 @@
 const axios = require('axios');
 const geminiAI = require('../services/gemini-ai');
 const shopeeGraphQL = require('../services/shopee-graphql');
+const { SHOP_OFFERS_DATABASE } = require('../js/deals-db');
+const { SHOPEE_PRODUCT_OFFERS } = require('../js/product-offers-db');
 
 class TelegramWebhookController {
   constructor() {
@@ -85,62 +87,21 @@ class TelegramWebhookController {
    * ค้นหาสินค้าจากคำค้นหาของผู้ใช้
    */
   async findMatchingDeals(query) {
-    const q = query.toLowerCase();
-
-    // ตัวอย่างสินค้าตัวท็อปในระบบ
-    const sampleDeals = [
-      {
-        id: 'eloop-e29',
-        title: 'Eloop E29 แบตสำรอง 30000mAh ชาร์จเร็ว PD 20W / QC 3.0',
-        shopName: 'Eloop & Orsen Official Store',
-        salePrice: 479,
-        originalPrice: 890,
-        discount: 'ลด 46%',
-        soldCount: '4.8 หมื่นชิ้น',
-        imageUrl: 'https://down-th.img.susercontent.com/file/th-11134207-81zth-mqilmuwfdnnxe6',
-        defaultUrl: 'https://shopee.co.th/product/153497201/21443658213'
-      },
-      {
-        id: 'tyeso-cup',
-        title: 'Tyeso แก้วเก็บความเย็น สแตนเลส 304 แท้ มีหูหิ้ว 600ml / 900ml',
-        shopName: 'Tyeso Official Thailand',
-        salePrice: 189,
-        originalPrice: 350,
-        discount: 'ลด 46%',
-        soldCount: '8.2 หมื่นชิ้น',
-        imageUrl: 'https://down-th.img.susercontent.com/file/th-11134207-7ras9-m3zrfvaxfop6d8',
-        defaultUrl: 'https://shopee.co.th/product/153497201/18293746501'
-      },
-      {
-        id: 'osuka-drill',
-        title: 'OSUKA สว่านกระแทกไร้สาย บล็อกแบตเตอรี่ Brushless ไร้แปลงถ่าน 128V',
-        shopName: 'OSUKA Power Tools Official',
-        salePrice: 1290,
-        originalPrice: 2490,
-        discount: 'ลด 48%',
-        soldCount: '2.5 หมื่นชิ้น',
-        imageUrl: 'https://down-th.img.susercontent.com/file/5928c055fb720f085bb7d4e471bae3df',
-        defaultUrl: 'https://shopee.co.th/product/153497201/19283746512'
-      },
-      {
-        id: 'fashion-tee',
-        title: 'Rosa Mute Minimal Oversize T-Shirt เสื้อยืดมินิมอล ทรงเกาหลี',
-        shopName: 'Rosa Mute Official',
-        salePrice: 250,
-        originalPrice: 490,
-        discount: 'ลด 49%',
-        soldCount: '3.4 หมื่นชิ้น',
-        imageUrl: 'https://down-th.img.susercontent.com/file/sg-11134201-825zu-mm8cvyazrojm14',
-        defaultUrl: 'https://shopee.co.th/product/153497201/22334455667'
-      }
+    const q = (query || '').toLowerCase().trim();
+    const allDeals = [
+      ...(SHOP_OFFERS_DATABASE || []),
+      ...(SHOPEE_PRODUCT_OFFERS || [])
     ];
 
-    const matched = sampleDeals.filter(d => {
-      const text = `${d.title} ${d.shopName}`.toLowerCase();
-      return q.split(' ').some(word => word.length > 2 && text.includes(word));
+    if (!q) return [allDeals[0]];
+
+    const words = q.split(/\s+/).filter(w => w.length > 1);
+    const matched = allDeals.filter(d => {
+      const text = `${d.title || ''} ${d.shopName || ''} ${d.categoryName || ''}`.toLowerCase();
+      return words.some(w => text.includes(w));
     });
 
-    return matched.length > 0 ? matched : [sampleDeals[0]];
+    return matched.length > 0 ? matched : [allDeals[0]];
   }
 
   /**
