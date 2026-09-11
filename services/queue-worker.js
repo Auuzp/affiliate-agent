@@ -7,12 +7,17 @@
 
 const cron = require('node-cron');
 const socialPublisher = require('./social-publisher');
+const geminiAI = require('./gemini-ai');
+const shopeeGraphQL = require('./shopee-graphql');
+const { SHOP_OFFERS_DATABASE } = require('../js/deals-db');
+const { SHOPEE_PRODUCT_OFFERS } = require('../js/product-offers-db');
 
 class QueueWorkerService {
   constructor() {
     this.queue = [];
     this.isWorkerRunning = false;
     this.workerInterval = null;
+    this.dealRotationIndex = 0;
 
     // โควตาสูงสุดรายวัน
     this.dailyLimits = {
@@ -53,8 +58,12 @@ class QueueWorkerService {
     const now = Date.now();
     const jobsCreated = [];
 
+    const pendingTg = this.queue.filter(j => j.platform === 'telegram' && j.status === 'pending').length;
+    const pendingTw = this.queue.filter(j => j.platform === 'twitter' && j.status === 'pending').length;
+    const pendingFb = this.queue.filter(j => j.platform === 'facebook' && j.status === 'pending').length;
+
     // 1. Telegram Job (ยิงทันทีเพื่อจับลูกค้าเรียลไทม์)
-    if (this.dailyCounts.telegram < this.dailyLimits.telegram) {
+    if ((this.dailyCounts.telegram + pendingTg) < this.dailyLimits.telegram) {
       const tgJob = {
         id: `job-tg-${now}`,
         platform: 'telegram',
@@ -69,7 +78,7 @@ class QueueWorkerService {
     }
 
     // 2. Twitter / X Job (หน่วงเบาๆ 5 - 10 วินาที)
-    if (this.dailyCounts.twitter < this.dailyLimits.twitter) {
+    if ((this.dailyCounts.twitter + pendingTw) < this.dailyLimits.twitter) {
       const twitterJitterMs = (5 + Math.floor(Math.random() * 5)) * 1000;
       const twJob = {
         id: `job-tw-${now}`,
@@ -83,7 +92,7 @@ class QueueWorkerService {
     }
 
     // 3. Facebook Page Job (หน่วงเบาๆ 15 - 30 วินาที ไม่ต้องรอนาน)
-    if (this.dailyCounts.facebook < this.dailyLimits.facebook) {
+    if ((this.dailyCounts.facebook + pendingFb) < this.dailyLimits.facebook) {
       const fbJitterMs = (15 + Math.floor(Math.random() * 15)) * 1000;
       const fbJob = {
         id: `job-fb-${now}`,
@@ -170,52 +179,75 @@ class QueueWorkerService {
   }
 
   /**
-   * ระบบ Cron 3 เวลาทองคำ (23:55, 11:50, 20:00)
+   * ระบบ Cron อัตโนมัติ 24 ชม. ฝั่ง Backend (ไม่ต้องเปิดบราวเซอร์ทิ้งไว้)
    */
   initCronJobs() {
-    // 1. รอบดึก 23:55 น. (ดักโค้ดลดเที่ยงคืน)
+    this.dealRotationIndex = 0;
+
+    // 1. รอบดึก 23:55 น. (ดักโค้ดลดเที่ยงคืน & Double Day / Payday)
     cron.schedule('55 23 * * *', () => {
-      console.log('⏰ [Cron Golden Hour] 23:55 น. ทริกเกอร์รอบโค้ดลดเที่ยงคืน & Double Day / Payday');
-      this.triggerGoldenHourPush('midnight_2355');
+      console.log('⏰ [Cron 24/7 Backend] 23:55 น. ทริกเกอร์รอบโค้ดลดเที่ยงคืน & Double Day');
+      this.triggerAutonomousDealPublish('midnight_2355');
     });
 
-    // 2. รอบพักเที่ยง 11:50 น. (Flash Sale รอบเที่ยง)
+    // 2. รอบพักเที่ยง 11:50 น. (Flash Sale รอบเที่ยง 12:00)
     cron.schedule('50 11 * * *', () => {
-      console.log('🍱 [Cron Golden Hour] 11:50 น. ทริกเกอร์รอบพักเที่ยง Flash Sale 12:00');
-      this.triggerGoldenHourPush('lunch_1150');
+      console.log('🍱 [Cron 24/7 Backend] 11:50 น. ทริกเกอร์รอบพักเที่ยง Flash Sale 12:00');
+      this.triggerAutonomousDealPublish('lunch_1150');
     });
 
-    // 3. รอบหัวค่ำ 20:00 น. (ดีลนาทีทองพักผ่อน)
+    // 3. รอบบ่าย 15:30 น. (Flash Sale รอบบ่าย)
+    cron.schedule('30 15 * * *', () => {
+      console.log('☕ [Cron 24/7 Backend] 15:30 น. ทริกเกอร์รอบพักเบรกบ่าย');
+      this.triggerAutonomousDealPublish('afternoon_1530');
+    });
+
+    // 4. รอบหัวค่ำ 20:00 น. (ดีลนาทีทองพักผ่อนหลังเลิกงาน)
     cron.schedule('00 20 * * *', () => {
-      console.log('✨ [Cron Golden Hour] 20:00 น. ทริกเกอร์รอบนาทีทองหัวค่ำ');
-      this.triggerGoldenHourPush('evening_2000');
+      console.log('✨ [Cron 24/7 Backend] 20:00 น. ทริกเกอร์รอบนาทีทองหัวค่ำ');
+      this.triggerAutonomousDealPublish('evening_2000');
     });
 
-    console.log('[QueueWorker] 3 Golden Hours Cron Jobs initialized (23:55, 11:50, 20:00)');
+    console.log('[QueueWorker] 24/7 Autonomous Backend Cron initialized (23:55, 11:50, 15:30, 20:00)');
   }
 
-  async triggerGoldenHourPush(period) {
-    const titles = {
-      midnight_2355: '⏰ อีก 5 นาที! โค้ดลดเที่ยงคืน & Double Day เริ่มปล่อยแล้ว',
-      lunch_1150: '🍱 พักเที่ยงนี้ช้อปคุ้ม! Flash Sale 12:00 น. เริ่มแล้ว',
-      evening_2000: '✨ ดีลเด็ดนาทีทองหัวค่ำ ลดสูงสุด 80% ปิดรอบวันนี้'
-    };
+  async triggerAutonomousDealPublish(period) {
+    try {
+      const allDeals = [
+        ...(SHOP_OFFERS_DATABASE || []),
+        ...(SHOPEE_PRODUCT_OFFERS || [])
+      ];
+      if (allDeals.length === 0) return;
 
-    const caption = `${titles[period] || '🔥 ดีลเด็ด Shopee'}\n\nใครกำลังรอกดของในตะกร้า เตรียมตัวเลยครับ Shopee แจกโค้ดลดสูงสุด 50% และโค้ดส่งฟรีไม่อั้น!\n\n👇 พิกัดกดเก็บโค้ดลดพิเศษและดีลลับ แปะไว้ให้ใน "คอมเมนต์แรก" เรียบร้อยครับ จิ้มด่วนก่อนโค้ดหมด!`;
-    const comment = `🛒 พิกัดกดรับโค้ดและช้อปร้านแท้ตรงนี้ครับ 👉 https://shopee.co.th?sub1=fb_page_${period}\n\n#ShopeeAffiliate #คอมมิชชั่น (ได้รับค่าตอบแทนเมื่อสั่งซื้อผ่านลิงก์)`;
-    const bannerUrl = 'https://down-th.img.susercontent.com/file/th-11134207-7ras9-m3zrfvaxfop6d8.jpg';
+      // หมุนเวียนเลือกดีลตัวท็อปในคลังโดยอัตโนมัติ
+      const deal = allDeals[this.dealRotationIndex % allDeals.length];
+      this.dealRotationIndex++;
 
-    // 1. ส่งเข้า Telegram
-    await socialPublisher.sendToTelegram(
-      caption,
-      bannerUrl,
-      '👉 เก็บโค้ดลดตรงนี้',
-      `https://shopee.co.th?sub1=tg_${period}`
-    );
+      const defaultUrl = deal.defaultUrl || deal.offerUrl || 'https://shopee.co.th';
 
-    // 2. ส่งเข้า Facebook Page อัตโนมัติ (ผ่าน Make.com Relay)
-    await socialPublisher.sendToFacebookPage(caption, bannerUrl, comment);
-    console.log(`[QueueWorker] Golden hour ${period} dispatched to Telegram & Facebook Page`);
+      // สร้าง Short Links แยก Sub-ID อัตโนมัติสำหรับรอบเวลานี้
+      const [tgLink, fbLink, xLink] = await Promise.all([
+        shopeeGraphQL.generateShortLink(defaultUrl, [`tg_${period}`]),
+        shopeeGraphQL.generateShortLink(defaultUrl, [`fb_${period}`]),
+        shopeeGraphQL.generateShortLink(defaultUrl, [`x_${period}`])
+      ]);
+
+      const urls = {
+        tg: tgLink.shortLink || tgLink.deepLinkUrl,
+        fb: fbLink.shortLink || fbLink.deepLinkUrl,
+        x: xLink.shortLink || xLink.deepLinkUrl
+      };
+
+      // AI Copywriting
+      const postPayload = await geminiAI.generateMultiPlatformPost(deal, urls);
+
+      // นำเข้าคิวหน่วงเวลา Staggered Jitter Queue บนเซิร์ฟเวอร์
+      const jobs = this.enqueueDeal(postPayload);
+      console.log(`[QueueWorker 24/7 Autonomous] Enqueued ${jobs.length} jobs for deal "${deal.title.slice(0, 30)}..." (${period})`);
+
+    } catch (err) {
+      console.error('[QueueWorker Autonomous Error]:', err.message);
+    }
   }
 }
 

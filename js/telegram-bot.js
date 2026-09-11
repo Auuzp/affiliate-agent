@@ -164,13 +164,18 @@ class TelegramDealBot {
    */
   async sendPhoto(chatId, photoUrl, caption) {
     const endpoint = `https://api.telegram.org/bot${this.botToken}/sendPhoto`;
+    // ตัดความยาวไม่ให้เกิน 1,020 ตัวอักษร เพื่อป้องกัน Error 400 จาก Telegram API
+    let cleanCaption = (caption || '').trim();
+    if (cleanCaption.length > 1020) {
+      cleanCaption = cleanCaption.slice(0, 1017) + '...';
+    }
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
         photo: photoUrl,
-        caption: caption
+        caption: cleanCaption
       })
     });
     return response.json();

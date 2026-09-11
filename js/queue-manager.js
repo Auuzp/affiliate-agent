@@ -88,8 +88,12 @@ class QueueManager {
     const now = Date.now();
     const scheduledJobs = [];
 
-    // 1. Telegram: ส่งทันที (หากยังไม่เกินโควตา 10 โพสต์)
-    if (this.publisher.telegram.enabled && this.counts.telegram < this.dailyLimits.telegram) {
+    const pendingTg = this.queue.filter(q => q.platform === 'telegram' && (q.status === 'pending' || q.status === 'processing')).length;
+    const pendingTw = this.queue.filter(q => q.platform === 'twitter' && (q.status === 'pending' || q.status === 'processing')).length;
+    const pendingFb = this.queue.filter(q => q.platform === 'facebook' && (q.status === 'pending' || q.status === 'processing')).length;
+
+    // 1. Telegram: ส่งทันที (หากผลรวมเสร็จแล้ว + รอดำเนินการ ยังไม่เกินโควตา)
+    if (this.publisher.telegram.enabled && (this.counts.telegram + pendingTg) < this.dailyLimits.telegram) {
       const tgJob = {
         id: 'job_tg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         platform: 'telegram',
@@ -102,8 +106,8 @@ class QueueManager {
       scheduledJobs.push(tgJob);
     }
 
-    // 2. X (Twitter): หน่วงเวลาแบบสุ่ม 5-10 นาที (Random Jitter 300,000 - 600,000 ms)
-    if (this.publisher.twitter.enabled && this.counts.twitter < this.dailyLimits.twitter) {
+    // 2. X (Twitter): หน่วงเวลาแบบสุ่ม 5-10 นาที
+    if (this.publisher.twitter.enabled && (this.counts.twitter + pendingTw) < this.dailyLimits.twitter) {
       const xJitterMs = (5 + Math.floor(Math.random() * 6)) * 60 * 1000; // 5-10 นาที
       const xJob = {
         id: 'job_tw_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
@@ -117,8 +121,8 @@ class QueueManager {
       scheduledJobs.push(xJob);
     }
 
-    // 3. Facebook Page: หน่วงเวลาสุ่ม 12-18 นาที (Random Jitter 720,000 - 1,080,000 ms)
-    if (this.facebookEnabled() && this.counts.facebook < this.dailyLimits.facebook) {
+    // 3. Facebook Page: หน่วงเวลาสุ่ม 12-18 นาที
+    if (this.facebookEnabled() && (this.counts.facebook + pendingFb) < this.dailyLimits.facebook) {
       const fbJitterMs = (12 + Math.floor(Math.random() * 7)) * 60 * 1000; // 12-18 นาที
       const fbJob = {
         id: 'job_fb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),

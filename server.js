@@ -14,6 +14,7 @@ const path = require('path');
 const shopeeGraphQL = require('./services/shopee-graphql');
 const geminiAI = require('./services/gemini-ai');
 const queueWorker = require('./services/queue-worker');
+const socialPublisher = require('./services/social-publisher');
 const telegramWebhook = require('./controllers/telegram-webhook');
 
 const app = express();
@@ -136,6 +137,19 @@ app.post('/api/queue/flush', (req, res) => {
 
 app.post('/api/queue/clear', (req, res) => {
   res.json(queueWorker.clearQueue());
+});
+
+// ==============================================================================
+// 6. Twitter Proxy Endpoint (CORS-Safe Server Dispatch)
+// ==============================================================================
+app.post('/api/twitter/tweet', async (req, res) => {
+  try {
+    const { mainTweet, threadReply, imageUrl } = req.body;
+    const result = await socialPublisher.sendToTwitter(mainTweet, imageUrl, threadReply);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ==============================================================================

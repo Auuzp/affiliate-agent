@@ -248,44 +248,26 @@ class MultiChannelPublisher {
       });
       if (!response.ok) throw new Error(`Webhook Error (${response.status})`);
       return true;
-    } else if (this.twitter.bearerToken) {
-      // Direct Twitter API v2 (Main Tweet ➡️ Reply Thread)
-      const endpoint = 'https://api.twitter.com/2/tweets';
-      
-      // ทวีตหลัก
-      const res1 = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.twitter.bearerToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ text: mainTweet })
-      });
-      const data1 = await res1.json();
-      if (!res1.ok) throw new Error(data1.detail || 'Twitter main tweet failed');
-
-      // Thread Reply แปะลิงก์
-      if (data1.data?.id && threadReply) {
-        try {
-          await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${this.twitter.bearerToken}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              text: threadReply,
-              reply: { in_reply_to_tweet_id: data1.data.id }
-            })
-          });
-        } catch (rErr) {
-          console.warn('Twitter thread reply failed, main tweet was posted:', rErr);
-        }
-      }
-
-      return data1;
     } else {
-      throw new Error('กรุณาระบุ Webhook URL หรือ Twitter Bearer Token');
+      // ส่งผ่าน Backend Proxy Server เพื่อหลีกเลี่ยง CORS Restriction ของ Browser 100%
+      try {
+        const response = await fetch('/api/twitter/tweet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mainTweet,
+            threadReply,
+            imageUrl,
+            bearerToken: this.twitter.bearerToken
+          })
+        });
+        if (response.ok) return true;
+        const data = await response.json();
+        throw new Error(data.error || 'Twitter dispatch failed');
+      } catch (err) {
+        console.warn('Backend twitter proxy error:', err.message);
+        throw err;
+      }
     }
   }
 }

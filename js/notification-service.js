@@ -218,8 +218,15 @@ class NotificationService {
    * ยิงการแจ้งเตือน Golden Hour (ทั้ง Browser Push และ Telegram Broadcast)
    */
   async triggerGoldenHourAlert(gh, isTest = false) {
-    const linkData = this.agent ? this.agent.generateDeepLink(gh.defaultUrl, gh.subId) : null;
-    const targetUrl = linkData ? linkData.affiliateUrl : gh.defaultUrl;
+    // คัดเลือกดีลตัวท็อปในคลังเพื่อใช้รูปภาพสินค้าความละเอียดสูงและลิงก์จริง
+    const topDeals = (typeof window !== 'undefined' && window.TRENDING_DEALS_DATABASE) ? window.TRENDING_DEALS_DATABASE : [];
+    const featuredDeal = topDeals.length > 0 ? topDeals[Math.floor(Math.random() * Math.min(topDeals.length, 6))] : null;
+
+    const productImageUrl = (featuredDeal && featuredDeal.imageUrl) ? featuredDeal.imageUrl : gh.icon;
+    const itemUrl = (featuredDeal && (featuredDeal.defaultUrl || featuredDeal.offerUrl)) ? (featuredDeal.defaultUrl || featuredDeal.offerUrl) : gh.defaultUrl;
+
+    const linkData = this.agent ? this.agent.generateDeepLink(itemUrl, gh.subId) : null;
+    const targetUrl = linkData ? linkData.affiliateUrl : itemUrl;
     const deepLink = linkData ? linkData.deepLink : `shopeeth://open?url=${encodeURIComponent(targetUrl)}`;
     const bridgeUrl = linkData ? linkData.bridgeUrl : targetUrl;
 
@@ -231,7 +238,7 @@ class NotificationService {
       try {
         const notif = new Notification(gh.title, {
           body: gh.body,
-          icon: gh.icon,
+          icon: productImageUrl,
           tag: gh.tag,
           requireInteraction: true,
           data: {
@@ -243,7 +250,6 @@ class NotificationService {
         notif.onclick = function(event) {
           event.preventDefault();
           window.focus();
-          // พยายามเปิด Deep Link เข้าแอป Shopee โดยตรง
           window.open(bridgeUrl, '_blank');
           notif.close();
         };
@@ -256,9 +262,10 @@ class NotificationService {
     let tgSent = false;
     if (this.broadcastTg && this.publisher && this.publisher.telegram.enabled && this.publisher.telegram.botToken) {
       try {
-        const tgCaption = `⚡ ${gh.title}\n\n${gh.body}\n\n🛒 แตะเปิดในแอป Shopee ทันที 👉 ${targetUrl}\n(หรือเปิดผ่าน Deep Link 👉 ${bridgeUrl})`;
-        const buttonText = '👉 แตะรับโค้ด & ช้อปด่วน';
-        await this.publisher.sendToTelegram(tgCaption, gh.icon, buttonText, targetUrl);
+        const dealHighlight = featuredDeal ? `\n\n🛍️ ดีลพิเศษประจำรอบ: "${featuredDeal.title.slice(0, 50)}..." ลดเหลือ ฿${featuredDeal.salePrice?.toLocaleString()}.-` : '';
+        const tgCaption = `⚡ ${gh.title}\n\n${gh.body}${dealHighlight}\n\n🛒 สั่งซื้อ/เก็บโค้ดเปิดในแอป Shopee ทันที 👉 ${targetUrl}`;
+        const buttonText = featuredDeal ? `👉 สั่งซื้อร้านแท้ (฿${featuredDeal.salePrice?.toLocaleString()}.-)` : '👉 แตะรับโค้ด & ช้อปด่วน';
+        await this.publisher.sendToTelegram(tgCaption, productImageUrl, buttonText, targetUrl);
         tgSent = true;
       } catch (tgErr) {
         console.warn('Failed to broadcast Golden Hour to Telegram:', tgErr);

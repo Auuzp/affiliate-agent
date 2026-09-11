@@ -609,8 +609,11 @@ class AffiliateApp {
       offerUrl = offerUrl.replace(/[;,]$/, '').trim();
 
       const resolved = this.agent.resolveShopeeDeal(offerUrl, cleanTitle, 'lifestyle');
-      const originalPrice = Math.round(salePrice * 1.35);
-      const discount = `ลด ${Math.round((1 - (salePrice / originalPrice)) * 100)}%`;
+      const effectiveSalePrice = salePrice > 0 ? salePrice : 290;
+      const originalPrice = Math.round(effectiveSalePrice * 1.35);
+      const discount = (originalPrice > effectiveSalePrice && originalPrice > 0)
+        ? `ลด ${Math.round((1 - (effectiveSalePrice / originalPrice)) * 100)}%`
+        : 'ลดพิเศษ';
 
       deals.push({
         id: `po-${rawId}`,
@@ -620,7 +623,7 @@ class AffiliateApp {
         categoryName: resolved.categoryName || '🛍️ สินค้าแนะนำ Shopee',
         title: cleanTitle,
         originalPrice: originalPrice,
-        salePrice: salePrice,
+        salePrice: effectiveSalePrice,
         discount: discount,
         rating: 4.8 + Math.round(Math.random() * 2) / 10,
         soldCount: soldCount,
@@ -672,6 +675,7 @@ class AffiliateApp {
           this.dealMatchRate.textContent = resolved.commissionRate;
           this.dealMatchRate.className = 'px-2 py-0.5 rounded font-mono font-bold bg-indigo-500/20 text-indigo-300 text-[10px]';
         }
+        this.refreshIcons();
       }
 
       // Update Preview Card
@@ -1084,12 +1088,17 @@ class AffiliateApp {
       const highTickets = all.filter(d => (d.estCommission || 0) >= 60).sort((a, b) => b.estCommission - a.estCommission);
       const impulseDeals = all.filter(d => (d.estCommission || 0) < 60 && (d.salePrice || 0) <= 800);
 
+      if (highTickets.length === 0) return impulseDeals.length > 0 ? impulseDeals : all;
+      if (impulseDeals.length === 0) return highTickets;
+
       const mixed = [];
-      let hIdx = 0, iIdx = 0;
-      while (hIdx < highTickets.length || iIdx < impulseDeals.length) {
-        if (hIdx < highTickets.length) mixed.push(highTickets[hIdx++]);
-        if (iIdx < impulseDeals.length) mixed.push(impulseDeals[iIdx++]);
-        if (iIdx < impulseDeals.length) mixed.push(impulseDeals[iIdx++]);
+      let iCounter = 0;
+      for (let h = 0; h < highTickets.length; h++) {
+        mixed.push(highTickets[h]);
+        mixed.push(impulseDeals[iCounter % impulseDeals.length]);
+        iCounter++;
+        mixed.push(impulseDeals[iCounter % impulseDeals.length]);
+        iCounter++;
       }
       return mixed.length > 0 ? mixed : all;
     }
@@ -1388,6 +1397,12 @@ class AffiliateApp {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  refreshIcons() {
+    if (typeof window !== 'undefined' && window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
   }
 }
 
