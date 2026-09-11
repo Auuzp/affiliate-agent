@@ -1,0 +1,22 @@
+﻿name: 24/7 Render Cloud Keep-Alive
+
+on:
+  schedule:
+    # Run every 10 minutes to prevent Render Free Tier from entering sleep mode
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Production Server
+        run: |
+          echo "Pinging Render Production Server to keep 24/7 autonomous worker alive..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -m 45 https://dealy-affiliate-pilot.onrender.com/api/health)
+          echo "Response HTTP Status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "Render Cloud is awake, healthy, and queue worker is active!"
+          else
+            echo "Render responded with status $HTTP_STATUS"
+          fi

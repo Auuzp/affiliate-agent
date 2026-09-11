@@ -22,6 +22,9 @@ class SocialPublisherService {
    */
   async sendToTelegram(caption, imageUrl, buttonText, buttonUrl) {
     if (!this.telegramToken || !this.telegramChannelId) {
+      if (this.webhookRelayUrl) {
+        return this.sendViaWebhook('telegram', { caption, imageUrl, buttonText, buttonUrl });
+      }
       console.log(`[Telegram Simulation] Would send photo to ${this.telegramChannelId || 'channel'}: ${buttonText}`);
       return { success: true, simulated: true };
     }

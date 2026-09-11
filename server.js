@@ -10,6 +10,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const axios = require('axios');
 
 const shopeeGraphQL = require('./services/shopee-graphql');
 const geminiAI = require('./services/gemini-ai');
@@ -151,6 +152,25 @@ app.post('/api/twitter/tweet', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ==============================================================================
+// 7. 24/7 Cloud Keep-Alive Auto-Pinger (Prevents Render Sleep Mode)
+// ==============================================================================
+const keepAliveTargetUrl = process.env.BASE_URL?.includes('render.com') 
+  ? `${process.env.BASE_URL}/api/health` 
+  : 'https://dealy-affiliate-pilot.onrender.com/api/health';
+
+console.log(`[Keep-Alive] 24/7 Cloud Auto-Pinger initialized for: ${keepAliveTargetUrl}`);
+
+// ยิง Ping ทุกๆ 8 นาที เพื่อให้เซิร์ฟเวอร์ Cloud ตื่นตัวตลอด 24 ชม. ไม่เข้า Sleep Mode (Render Sleep ที่ 15 นาที)
+setInterval(async () => {
+  try {
+    const res = await axios.get(keepAliveTargetUrl, { timeout: 15000 });
+    console.log(`[Keep-Alive Ping] Status: ${res.data?.status || 'ok'} (${new Date().toLocaleTimeString('th-TH')})`);
+  } catch (err) {
+    console.warn('[Keep-Alive Ping Notice]:', err.message);
+  }
+}, 8 * 60 * 1000);
 
 // ==============================================================================
 // Start Server

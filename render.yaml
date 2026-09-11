@@ -15,6 +15,8 @@ services:
         value: "https://hook.eu1.make.com/03af6d4heuc2qg4g11ijn9lq8llsla8t"
       - key: FACEBOOK_PAGE_ID
         value: "106756152526353"
+      - key: FACEBOOK_PAGE_ACCESS_TOKEN
+        sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: TELEGRAM_CHANNEL_ID
