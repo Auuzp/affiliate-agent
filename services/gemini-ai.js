@@ -124,7 +124,7 @@ Pain Point: "${painPoint.hook}"
 
     const tgText = `🔥 [ดีลเด็ดลดแรง] ${deal.title}\n\n⚡ ปัญหาที่หลายคนเจอ: "${hook}"\n✨ ตัวนี้จบปัญหาได้จริง ของแท้ 100% จาก ${deal.shopName}\n🏷️ พิเศษเพียง ${priceStr}\n\nกดปุ่มสั่งซื้อที่ปุ่มด้านล่างได้เลยครับ 👇`;
 
-    const fbText = `ใครเคยเจอปัญหานี้บ้าง? 😭\n\n"${hook}"\n\nบอกเลยว่าไอเทมนี้ตอบโจทย์มาก ได้ของแท้จากร้าน ${deal.shopName} ยอดขายไปแล้ว ${deal.soldCount || 'ถล่มทลาย'} คุณภาพคุ้มราคามาก\n\n💰 ตอนนี้จัดโปรลดเหลือ ${priceStr}\n\n👇 พิกัดร้านศูนย์แท้และโค้ดลดพิเศษ แปะไว้ให้ใน "คอมเมนต์แรก" เรียบร้อยครับ จิ้มได้เลย!`;
+    const fbText = `ใครเคยเจอปัญหานี้บ้าง? 😭\n\n"${hook}"\n\nบอกเลยว่าไอเทมนี้ตอบโจทย์มาก ของแท้จากร้าน ${deal.shopName} ยอดขายทะลุ ${deal.soldCount || 'ถล่มทลาย'} แล้ว การันตีคุณภาพคุ้มราคามาก\n\n💰 จัดโปรลดพิเศษเหลือเพียง ${priceStr} (ด่วน ก่อนหมดรอบโปร!)`;
 
     const xText = `เหนื่อยใจกับปัญหาเดิมๆ "${hook}" 😩\nตัวนี้แก้ตรงจุดมาก ของแท้ศูนย์ ${deal.shopName} ลดเหลือ ${priceStr} แล้ว!\n\n👇 พิกัดร้านแท้ จิ้มในเธรดด้านล่างได้เลยครับ 🧵\n#ShopeeTH #ของดีบอกต่อ #ป้ายยาช้อปปี้`;
 
@@ -133,9 +133,10 @@ Pain Point: "${painPoint.hook}"
 
   formatPayloads(deal, tone, urls, content) {
     const complianceNotice = '#ShopeeAffiliate #คอมมิชชั่น (ได้รับค่าตอบแทนเมื่อสั่งซื้อผ่านลิงก์)';
+    const tgInvite = process.env.TELEGRAM_CHANNEL_URL ? `\n\n📲 เข้ากลุ่มลับ Telegram รับแจ้งเตือนโค้ดลด 50% ก่อนใคร: ${process.env.TELEGRAM_CHANNEL_URL}` : '';
 
-    // แคปชัน Facebook แบบรวมพิกัดลิงก์และโค้ดลดในโพสต์ทันที เพื่อ Conversion Rate สูงสุด
-    const fbCaptionWithLink = `${content.fbText}\n\n👇 พิกัดร้านแท้ & โค้ดลดพิเศษ (จิ้มตรงนี้ได้เลย):\n👉 ${urls.fb}\n\n${complianceNotice}`;
+    // แคปชัน Facebook เน้น Hook ชัดเจน + พิกัดร้านแท้ทันที เพื่อ Conversion Rate สูงสุด
+    const fbCaptionWithLink = `${content.fbText}\n\n👇 พิกัดร้านแท้ & โค้ดลดพิเศษ (จิ้มเปิดแอป Shopee ได้เลย):\n👉 ${urls.fb}${tgInvite}\n\n${complianceNotice}`;
 
     return {
       deal,

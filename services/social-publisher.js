@@ -127,7 +127,8 @@ class SocialPublisherService {
       const payload = {
         platform,
         timestamp: new Date().toISOString(),
-        ...cleanData
+        ...cleanData,
+        imageurl: cleanData.imageUrl
       };
       const res = await axios.post(this.webhookRelayUrl, payload, { timeout: 10000 });
       console.log(`[Webhook Relay] Sent ${platform} payload successfully`);
