@@ -8,56 +8,47 @@ class QueueManager {
   constructor(publisher) {
     this.publisher = publisher;
 
-    // โควตารายวันสูงสุดตามอัลกอริทึม
+    // โควตารายวันเริ่มต้น (จะถูก sync กับค่าจริงบน Server)
     this.dailyLimits = {
-      telegram: 10, // 5-10 ดีล/วัน
-      twitter: 8,   // 6-8 ทวีต/วัน
-      facebook: 5   // 3-5 โพสต์/วัน
+      telegram: 10,
+      twitter: 8,
+      facebook: 5
     };
 
-    // ระยะห่างขั้นต่ำระหว่างโพสต์ (มิลลิวินาที)
-    this.minIntervals = {
-      telegram: 45 * 60 * 1000, // 45 นาที
-      twitter: 60 * 60 * 1000,  // 1 ชั่วโมง
-      facebook: 120 * 60 * 1000 // 2 ชั่วโมง
+    this.counts = {
+      telegram: 0,
+      twitter: 0,
+      facebook: 0
     };
 
     this.queue = [];
-    this.isProcessing = false;
     this.timer = null;
     this.onUpdateCallbacks = [];
 
-    this.loadState();
-    this.startWorker();
+    // ล้างค่าเก่าที่เคยเก็บใน localStorage ออกเพื่อความปลอดภัยและความถูกต้อง
+    localStorage.removeItem('aff_queue_date');
+    localStorage.removeItem('aff_count_tg');
+    localStorage.removeItem('aff_count_tw');
+    localStorage.removeItem('aff_count_fb');
+
+    this.startStatsSync();
   }
 
-  loadState() {
-    const todayKey = this.getTodayKey();
-    const storedDate = localStorage.getItem('aff_queue_date');
-
-    if (storedDate !== todayKey) {
-      // รีเซ็ตโควตารายวันเมื่อขึ้นวันใหม่
-      localStorage.setItem('aff_queue_date', todayKey);
-      this.counts = { telegram: 0, twitter: 0, facebook: 0 };
-      this.saveCounts();
-    } else {
-      this.counts = {
-        telegram: parseInt(localStorage.getItem('aff_count_tg') || '0', 10),
-        twitter: parseInt(localStorage.getItem('aff_count_tw') || '0', 10),
-        facebook: parseInt(localStorage.getItem('aff_count_fb') || '0', 10)
-      };
+  /**
+   * ตัวช่วยต่อท้ายข้อความเปิดเผย Affiliate Disclosure (#ad) ป้องกันการลบออก
+   */
+  ensureAffiliateDisclosure(text, maxLength = null) {
+    const disclosure = '#ad มีค่าคอมมิชชันจากการซื้อผ่านลิงก์นี้';
+    let str = (text || '').trim();
+    if (!str.includes('#ad')) {
+      const suffix = '\n\n' + disclosure;
+      if (maxLength && (str.length + suffix.length) > maxLength) {
+        str = str.slice(0, maxLength - suffix.length - 3) + '...' + suffix;
+      } else {
+        str = str + suffix;
+      }
     }
-  }
-
-  saveCounts() {
-    localStorage.setItem('aff_count_tg', this.counts.telegram.toString());
-    localStorage.setItem('aff_count_tw', this.counts.twitter.toString());
-    localStorage.setItem('aff_count_fb', this.counts.facebook.toString());
-  }
-
-  getTodayKey() {
-    const d = new Date();
-    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    return str;
   }
 
   onUpdate(cb) {
@@ -75,161 +66,130 @@ class QueueManager {
     return {
       counts: { ...this.counts },
       limits: { ...this.dailyLimits },
-      pendingCount: this.queue.filter(q => q.status === 'pending').length,
+      pendingCount: this.queue.length,
       queue: this.queue.slice(0, 10)
     };
   }
 
   /**
-   * จัดคิวหน่วงเวลาแบบ Staggered Jitter
-   * Telegram ยิงทันที ➡️ X เว้น 5-10 นาที ➡️ Facebook เว้น 10-15 นาที
+   * เริ่มรอบดึงข้อมูลคิวและโควตาจาก Node.js Server แบบเรียลไทม์
    */
-  enqueueDeal(post) {
-    const now = Date.now();
-    const scheduledJobs = [];
-
-    const pendingTg = this.queue.filter(q => q.platform === 'telegram' && (q.status === 'pending' || q.status === 'processing')).length;
-    const pendingTw = this.queue.filter(q => q.platform === 'twitter' && (q.status === 'pending' || q.status === 'processing')).length;
-    const pendingFb = this.queue.filter(q => q.platform === 'facebook' && (q.status === 'pending' || q.status === 'processing')).length;
-
-    // 1. Telegram: ส่งทันที (หากผลรวมเสร็จแล้ว + รอดำเนินการ ยังไม่เกินโควตา)
-    if (this.publisher.telegram.enabled && (this.counts.telegram + pendingTg) < this.dailyLimits.telegram) {
-      const tgJob = {
-        id: 'job_tg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        platform: 'telegram',
-        post: post,
-        dealTitle: post.deal.title,
-        scheduledAt: now,
-        status: 'pending'
-      };
-      this.queue.push(tgJob);
-      scheduledJobs.push(tgJob);
-    }
-
-    // 2. X (Twitter): หน่วงเวลาแบบสุ่ม 5-10 นาที
-    if (this.publisher.twitter.enabled && (this.counts.twitter + pendingTw) < this.dailyLimits.twitter) {
-      const xJitterMs = (5 + Math.floor(Math.random() * 6)) * 60 * 1000; // 5-10 นาที
-      const xJob = {
-        id: 'job_tw_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        platform: 'twitter',
-        post: post,
-        dealTitle: post.deal.title,
-        scheduledAt: now + xJitterMs,
-        status: 'pending'
-      };
-      this.queue.push(xJob);
-      scheduledJobs.push(xJob);
-    }
-
-    // 3. Facebook Page: หน่วงเวลาสุ่ม 12-18 นาที
-    if (this.facebookEnabled() && (this.counts.facebook + pendingFb) < this.dailyLimits.facebook) {
-      const fbJitterMs = (12 + Math.floor(Math.random() * 7)) * 60 * 1000; // 12-18 นาที
-      const fbJob = {
-        id: 'job_fb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        platform: 'facebook',
-        post: post,
-        dealTitle: post.deal.title,
-        scheduledAt: now + fbJitterMs,
-        status: 'pending'
-      };
-      this.queue.push(fbJob);
-      scheduledJobs.push(fbJob);
-    }
-
-    this.emitUpdate();
-    return scheduledJobs;
-  }
-
-  facebookEnabled() {
-    return this.publisher.facebook.enabled && this.publisher.facebook.pageId && this.publisher.facebook.accessToken;
-  }
-
-  startWorker() {
+  startStatsSync() {
     if (this.timer) clearInterval(this.timer);
+    this.syncServerStats();
     this.timer = setInterval(() => {
-      this.processQueue();
-    }, 5000); // ตรวจคิวทุก 5 วินาที
+      this.syncServerStats();
+    }, 5000); // ซิงก์สถานะคิวทุก 5 วินาที
   }
 
   /**
-   * ตัวประมวลผลคิวเมื่อถึงเวลา
+   * ดึงสถานะคิวและการใช้งานโควตาจาก Server
    */
-  async processQueue() {
-    if (this.isProcessing) return;
-    const now = Date.now();
+  async syncServerStats() {
+    try {
+      const res = await fetch('/api/queue/stats');
+      if (!res.ok) return;
+      const data = await res.json();
 
-    const readyJob = this.queue.find(q => q.status === 'pending' && q.scheduledAt <= now);
-    if (!readyJob) {
+      if (data.dailyUsage) {
+        this.counts = {
+          telegram: data.dailyUsage.telegram || 0,
+          twitter: data.dailyUsage.twitter || 0,
+          facebook: data.dailyUsage.facebook || 0
+        };
+      }
+
+      if (data.dailyLimits) {
+        this.dailyLimits = { ...data.dailyLimits };
+      }
+
+      if (Array.isArray(data.queueList)) {
+        this.queue = data.queueList.map(j => ({
+          id: j.id,
+          platform: j.platform,
+          dealTitle: j.dealTitle,
+          status: 'pending',
+          scheduledAt: Date.now() + (j.scheduledInSec * 1000)
+        }));
+      }
+
       this.emitUpdate();
-      return;
+    } catch (e) {
+      // Backend offline หรือกำลังเชื่อมต่อ
     }
+  }
 
-    this.isProcessing = true;
-    readyJob.status = 'processing';
+  /**
+   * ส่งดีลเข้าคิว Staggered Jitter บน Server (รัน 24 ชม. แม้ปิด Browser)
+   * บังคับแนบ Affiliate Disclosure (#ad) ในทุกแพลตฟอร์ม
+   */
+  async enqueueDeal(post) {
+    if (!post || !post.deal) return [];
+
+    // บังคับแนบ Affiliate Disclosure ก่อนส่งเข้าคิวเสมอ
+    const securePost = { ...post };
+
+    if (securePost.telegram) {
+      securePost.telegram.caption = this.ensureAffiliateDisclosure(securePost.telegram.caption, 1020);
+    }
+    if (securePost.facebook) {
+      securePost.facebook.caption = this.ensureAffiliateDisclosure(securePost.facebook.caption);
+    }
+    if (securePost.twitter) {
+      securePost.twitter.mainTweet = this.ensureAffiliateDisclosure(securePost.twitter.mainTweet, 280);
+    }
+    if (securePost.caption) {
+      securePost.caption = this.ensureAffiliateDisclosure(securePost.caption);
+    }
 
     try {
-      if (readyJob.platform === 'telegram') {
-        const tgData = readyJob.post.telegram || {
-          caption: readyJob.post.caption,
-          imageUrl: readyJob.post.deal.imageUrl,
-          buttonText: '👉 สั่งซื้อตรงนี้',
-          buttonUrl: readyJob.post.affiliateUrl
-        };
-        await this.publisher.sendToTelegram(tgData.caption, tgData.imageUrl, tgData.buttonText, tgData.buttonUrl);
-        this.counts.telegram++;
-        readyJob.status = 'completed';
-        readyJob.completedAt = new Date().toLocaleTimeString('th-TH');
-      } else if (readyJob.platform === 'twitter') {
-        const xData = readyJob.post.twitter || {
-          mainTweet: (readyJob.post.caption || '').slice(0, 220),
-          imageUrl: readyJob.post.deal.imageUrl,
-          threadReply: 'พิกัดร้านแท้ 👉 ' + readyJob.post.affiliateUrl
-        };
-        await this.publisher.sendToTwitter(xData.mainTweet, xData.imageUrl, xData.threadReply);
-        this.counts.twitter++;
-        readyJob.status = 'completed';
-        readyJob.completedAt = new Date().toLocaleTimeString('th-TH');
-      } else if (readyJob.platform === 'facebook') {
-        const fbData = readyJob.post.facebook || {
-          caption: readyJob.post.caption,
-          imageUrl: readyJob.post.deal.imageUrl,
-          firstComment: '🛒 พิกัดร้านแท้ 👉 ' + readyJob.post.affiliateUrl
-        };
-        await this.publisher.sendToFacebookPage(fbData.caption, fbData.imageUrl, fbData.firstComment);
-        this.counts.facebook++;
-        readyJob.status = 'completed';
-        readyJob.completedAt = new Date().toLocaleTimeString('th-TH');
+      const res = await fetch('/api/queue/enqueue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post: securePost })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        await this.syncServerStats();
+        return data.jobs || [];
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        console.warn('[QueueManager] Enqueue failed on server:', errData.error);
       }
-      this.saveCounts();
-    } catch (err) {
-      console.warn(`[Queue Worker] Failed to send job ${readyJob.id}:`, err);
-      readyJob.status = 'failed';
-      readyJob.error = err.message;
-    } finally {
-      this.isProcessing = false;
-      this.emitUpdate();
+    } catch (e) {
+      console.warn('[QueueManager] Server connection error on enqueue:', e.message);
+    }
+
+    return [];
+  }
+
+  /**
+   * สั่งให้ Server ยิงคิวทั้งหมดทันที (Flush Queue)
+   */
+  async flushNow() {
+    try {
+      const res = await fetch('/api/queue/flush', { method: 'POST' });
+      if (res.ok) {
+        await this.syncServerStats();
+      }
+    } catch (e) {
+      console.warn('[QueueManager] Flush failed:', e);
     }
   }
 
   /**
-   * ส่งคิวทั้งหมดทันที (Flush Queue) สำหรับกรณีที่ผู้ใช้ต้องการบังคับส่ง
+   * สั่งล้างคิวบน Server
    */
-  async flushNow() {
-    const now = Date.now();
-    this.queue.forEach(q => {
-      if (q.status === 'pending') {
-        q.scheduledAt = now - 1000;
+  async clearQueue() {
+    try {
+      const res = await fetch('/api/queue/clear', { method: 'POST' });
+      if (res.ok) {
+        await this.syncServerStats();
       }
-    });
-    await this.processQueue();
-  }
-
-  /**
-   * เคลียร์คิวที่ค้างอยู่
-   */
-  clearQueue() {
-    this.queue = [];
-    this.emitUpdate();
+    } catch (e) {
+      console.warn('[QueueManager] Clear failed:', e);
+    }
   }
 }
 

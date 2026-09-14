@@ -132,11 +132,12 @@ Pain Point: "${painPoint.hook}"
   }
 
   formatPayloads(deal, tone, urls, content) {
-    const complianceNotice = '#ShopeeAffiliate #คอมมิชชั่น (ได้รับค่าตอบแทนเมื่อสั่งซื้อผ่านลิงก์)';
+    const complianceNotice = '#ad มีค่าคอมมิชชันจากการซื้อผ่านลิงก์นี้ #ShopeeAffiliate';
     const tgInvite = process.env.TELEGRAM_CHANNEL_URL ? `\n\n📲 เข้ากลุ่มลับ Telegram รับแจ้งเตือนโค้ดลด 50% ก่อนใคร: ${process.env.TELEGRAM_CHANNEL_URL}` : '';
 
     // แคปชัน Facebook เน้น Hook ชัดเจน + พิกัดร้านแท้ทันที เพื่อ Conversion Rate สูงสุด
     const fbCaptionWithLink = `${content.fbText}\n\n👇 พิกัดร้านแท้ & โค้ดลดพิเศษ (จิ้มเปิดแอป Shopee ได้เลย):\n👉 ${urls.fb}${tgInvite}\n\n${complianceNotice}`;
+    const tgCaptionWithDisclosure = content.tgText.includes('#ad') ? content.tgText : `${content.tgText}\n\n${complianceNotice}`;
 
     return {
       deal,
@@ -146,7 +147,7 @@ Pain Point: "${painPoint.hook}"
       affiliateUrl: urls.tg,
 
       telegram: {
-        caption: content.tgText,
+        caption: tgCaptionWithDisclosure,
         imageUrl: deal.imageUrl,
         buttonText: `👉 สั่งซื้อร้านแท้ / รับโค้ด (฿${deal.salePrice.toLocaleString()}.-)`,
         buttonUrl: urls.tg,
@@ -161,7 +162,7 @@ Pain Point: "${painPoint.hook}"
       },
 
       twitter: {
-        mainTweet: content.xText,
+        mainTweet: content.xText.includes('#ad') ? content.xText : `${content.xText}\n\n#ad`,
         imageUrl: deal.imageUrl,
         threadReply: `พิกัดร้านศูนย์แท้ 100% สั่งตรงนี้เลยครับ 👉 ${urls.x}\n\n${complianceNotice}`,
         subId: 'x_thread'

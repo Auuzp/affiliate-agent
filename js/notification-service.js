@@ -258,19 +258,9 @@ class NotificationService {
       }
     }
 
-    // 3. ส่งเข้า Telegram Channel อัตโนมัติ (หากเปิดใช้งาน)
+    // 3. การโพสต์และกระจายดีลตามรอบเวลาทองคำ (23:55, 11:50, 15:30, 20:00) 
+    // ทำงานอัตโนมัติ 24 ชม. ผ่าน node-cron บน Server เรียบร้อยแล้ว (ไม่ซ้ำซ้อนจาก Browser)
     let tgSent = false;
-    if (this.broadcastTg && this.publisher && this.publisher.telegram.enabled && this.publisher.telegram.botToken) {
-      try {
-        const dealHighlight = featuredDeal ? `\n\n🛍️ ดีลพิเศษประจำรอบ: "${featuredDeal.title.slice(0, 50)}..." ลดเหลือ ฿${featuredDeal.salePrice?.toLocaleString()}.-` : '';
-        const tgCaption = `⚡ ${gh.title}\n\n${gh.body}${dealHighlight}\n\n🛒 สั่งซื้อ/เก็บโค้ดเปิดในแอป Shopee ทันที 👉 ${targetUrl}`;
-        const buttonText = featuredDeal ? `👉 สั่งซื้อร้านแท้ (฿${featuredDeal.salePrice?.toLocaleString()}.-)` : '👉 แตะรับโค้ด & ช้อปด่วน';
-        await this.publisher.sendToTelegram(tgCaption, productImageUrl, buttonText, targetUrl);
-        tgSent = true;
-      } catch (tgErr) {
-        console.warn('Failed to broadcast Golden Hour to Telegram:', tgErr);
-      }
-    }
 
     // 4. แจ้งเตือน Callback UI
     const eventData = {

@@ -7,6 +7,21 @@
 
 const axios = require('axios');
 
+const AFFILIATE_DISCLOSURE = '#ad มีค่าคอมมิชชันจากการซื้อผ่านลิงก์นี้';
+
+function ensureAffiliateDisclosure(text, maxLength = null) {
+  let str = (text || '').trim();
+  if (!str.includes('#ad')) {
+    const suffix = '\n\n' + AFFILIATE_DISCLOSURE;
+    if (maxLength && (str.length + suffix.length) > maxLength) {
+      str = str.slice(0, maxLength - suffix.length - 3) + '...' + suffix;
+    } else {
+      str = str + suffix;
+    }
+  }
+  return str;
+}
+
 class SocialPublisherService {
   constructor() {
     this.telegramToken = process.env.TELEGRAM_BOT_TOKEN || '';
@@ -21,6 +36,9 @@ class SocialPublisherService {
    * ส่งภาพพร้อมปุ่ม Inline Keyboard Button ไปยัง Telegram Channel
    */
   async sendToTelegram(caption, imageUrl, buttonText, buttonUrl) {
+    // บังคับแนบ Affiliate Disclosure เสมอ (ป้องกันการหลุดหรือโดนตัด)
+    caption = ensureAffiliateDisclosure(caption, 1020);
+
     if (!this.telegramToken || !this.telegramChannelId) {
       if (this.webhookRelayUrl) {
         return this.sendViaWebhook('telegram', { caption, imageUrl, buttonText, buttonUrl });
@@ -66,6 +84,9 @@ class SocialPublisherService {
    * โพสต์รูปภาพขึ้น Facebook Page ไร้ลิงก์ ➡️ ยิง First Comment อัตโนมัติ (Anti-Suppression)
    */
   async sendToFacebookPage(caption, imageUrl, firstComment) {
+    // บังคับแนบ Affiliate Disclosure เสมอ
+    caption = ensureAffiliateDisclosure(caption);
+
     // 1. ตรวจสอบว่าเปิดใช้ Webhook Relay หรือไม่
     if (this.webhookRelayUrl) {
       return this.sendViaWebhook('facebook', { caption, imageUrl, firstComment });
@@ -129,6 +150,9 @@ class SocialPublisherService {
    * โพสต์ทวีตหลักบน X ไร้ลิงก์ ➡️ ยิง Thread Reply ทันที (Anti-Shadowban)
    */
   async sendToTwitter(mainTweet, imageUrl, threadReply) {
+    // บังคับแนบ Affiliate Disclosure เสมอ (ไม่เกิน 280 ตัวอักษร)
+    mainTweet = ensureAffiliateDisclosure(mainTweet, 280);
+
     if (this.webhookRelayUrl) {
       return this.sendViaWebhook('twitter', { mainTweet, imageUrl, threadReply });
     }

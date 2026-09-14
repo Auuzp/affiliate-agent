@@ -18,6 +18,10 @@ class AffiliateApp {
     this.dealIndex = 0;
     this.pendingFetchedDeal = null;
 
+    // Security: Purge legacy credentials from client-side localStorage
+    const legacyKeys = ['aff_tg_bot_token', 'aff_fb_access_token', 'aff_tw_webhook', 'aff_tw_bearer', 'affiliate_gemini_key'];
+    legacyKeys.forEach(k => localStorage.removeItem(k));
+
     // Load Clean Stats from localStorage
     this.stats = {
       posts: parseInt(localStorage.getItem('aff_stat_posts') || '0', 10),
@@ -90,17 +94,16 @@ class AffiliateApp {
     this.settingsModal = document.getElementById('settingsModal');
     this.openSettingsBtn = document.getElementById('openSettingsBtn');
     this.closeSettingsBtn = document.getElementById('closeSettingsBtn');
-    this.geminiKeyInput = document.getElementById('geminiKeyInput');
     this.aiModelSelect = document.getElementById('aiModelSelect');
 
-    // Channel Inputs in Modal
-    this.tgTokenInput = document.getElementById('tgTokenInput');
+    // Channel Inputs & Badges in Modal (Credentials managed securely on server)
+    this.tgStatusBadge = document.getElementById('tgStatusBadge');
     this.tgChannelInput = document.getElementById('tgChannelInput');
     this.tgChannelUrlInput = document.getElementById('tgChannelUrlInput');
+    this.fbStatusBadge = document.getElementById('fbStatusBadge');
     this.fbPageIdInput = document.getElementById('fbPageIdInput');
-    this.fbTokenInput = document.getElementById('fbTokenInput');
-    this.twWebhookInput = document.getElementById('twWebhookInput');
-    this.twBearerInput = document.getElementById('twBearerInput');
+    this.twStatusBadge = document.getElementById('twStatusBadge');
+    this.geminiStatusBadge = document.getElementById('geminiStatusBadge');
     this.saveAllSettingsBtn = document.getElementById('saveAllSettingsBtn');
     this.resetStatsBtn = document.getElementById('resetStatsBtn');
 
@@ -217,23 +220,18 @@ class AffiliateApp {
     this.tgBot.setInquiryListener((data) => this.handleTelegramInquiry(data));
 
     // Modals
-    this.openSettingsBtn?.addEventListener('click', () => {
-      this.geminiKeyInput.value = this.agent.apiKey;
+    this.openSettingsBtn?.addEventListener('click', async () => {
       if (this.aiModelSelect) this.aiModelSelect.value = this.agent.aiModel || 'gemini-2.5-flash';
-      this.tgTokenInput.value = this.publisher.telegram.botToken;
-      this.tgChannelInput.value = this.publisher.telegram.channelId;
-      if (this.tgChannelUrlInput) this.tgChannelUrlInput.value = this.agent.telegramChannelUrl;
-      this.fbPageIdInput.value = this.publisher.facebook.pageId;
-      this.fbTokenInput.value = this.publisher.facebook.accessToken;
-      this.twWebhookInput.value = this.publisher.twitter.webhookUrl;
-      this.twBearerInput.value = this.publisher.twitter.bearerToken;
-      this.settingsModal.classList.remove('hidden');
+      if (this.tgChannelInput) this.tgChannelInput.value = this.publisher.telegram.channelId || '';
+      if (this.tgChannelUrlInput) this.tgChannelUrlInput.value = this.agent.telegramChannelUrl || '';
+      if (this.fbPageIdInput) this.fbPageIdInput.value = this.publisher.facebook.pageId || '';
+      await this.refreshConfigStatusBadges();
+      this.settingsModal?.classList.remove('hidden');
     });
 
-    this.closeSettingsBtn?.addEventListener('click', () => this.settingsModal.classList.add('hidden'));
+    this.closeSettingsBtn?.addEventListener('click', () => this.settingsModal?.classList.add('hidden'));
 
     this.saveAllSettingsBtn?.addEventListener('click', () => {
-      this.agent.setApiKey(this.geminiKeyInput.value);
       if (this.aiModelSelect) {
         this.agent.setModel(this.aiModelSelect.value);
       }
@@ -242,20 +240,16 @@ class AffiliateApp {
       }
       this.publisher.saveCredentials({
         telegram: {
-          botToken: this.tgTokenInput.value,
-          channelId: this.tgChannelInput.value
+          channelId: this.tgChannelInput ? this.tgChannelInput.value.trim() : ''
         },
         facebook: {
-          pageId: this.fbPageIdInput.value,
-          accessToken: this.fbTokenInput.value
-        },
-        twitter: {
-          webhookUrl: this.twWebhookInput.value,
-          bearerToken: this.twBearerInput.value
+          pageId: this.fbPageIdInput ? this.fbPageIdInput.value.trim() : ''
         }
       });
-      this.tgBot.setCredentials(this.tgTokenInput.value, this.tgChannelInput.value);
-      this.settingsModal.classList.add('hidden');
+      if (this.tgBot && this.tgBot.setCredentials) {
+        this.tgBot.setCredentials('', this.tgChannelInput ? this.tgChannelInput.value.trim() : '');
+      }
+      this.settingsModal?.classList.add('hidden');
       this.logActivity(`บันทึกการตั้งค่าเรียบร้อย (โมเดลสมองกล AI: ${this.agent.aiModel})`, 'success');
       alert('บันทึกการตั้งค่าระบบ Multi-Channel & โมเดล AI เรียบร้อยแล้ว!');
     });
@@ -921,10 +915,61 @@ class AffiliateApp {
         if (this.agentStatusBeacon) {
           this.agentStatusBeacon.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 beacon-online';
         }
+        this.refreshConfigStatusBadges();
       }
     } catch (e) {
       this.backendActive = false;
       this.logActivity('ℹ️ รันในโหมด Client Browser Standalone (เซิร์ฟเวอร์ Node.js ออฟไลน์)', 'info');
+    }
+  }
+
+  async refreshConfigStatusBadges() {
+    try {
+      const res = await fetch('/api/config/status');
+      if (!res.ok) return;
+      const status = await res.json();
+
+      if (this.tgStatusBadge) {
+        if (status.telegram?.configured) {
+          this.tgStatusBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold';
+          this.tgStatusBadge.textContent = '🔒 SERVER (.env) เชื่อมต่อแล้ว ✅';
+        } else {
+          this.tgStatusBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold';
+          this.tgStatusBadge.textContent = '⚠️ รอระบุ TELEGRAM_BOT_TOKEN ใน .env';
+        }
+      }
+
+      if (this.fbStatusBadge) {
+        if (status.facebook?.configured) {
+          this.fbStatusBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold';
+          this.fbStatusBadge.textContent = '🔒 SERVER (.env) เชื่อมต่อแล้ว ✅';
+        } else {
+          this.fbStatusBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold';
+          this.fbStatusBadge.textContent = '⚠️ รอระบุ FACEBOOK_PAGE_ACCESS_TOKEN ใน .env';
+        }
+      }
+
+      if (this.twStatusBadge) {
+        if (status.twitter?.configured) {
+          this.twStatusBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold';
+          this.twStatusBadge.textContent = '🔒 SERVER (.env) เชื่อมต่อแล้ว ✅';
+        } else {
+          this.twStatusBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold';
+          this.twStatusBadge.textContent = '⚠️ รอระบุ Webhook/Key ใน .env';
+        }
+      }
+
+      if (this.geminiStatusBadge) {
+        if (status.gemini?.configured) {
+          this.geminiStatusBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold';
+          this.geminiStatusBadge.textContent = '🔒 SERVER AI BRAIN เชื่อมต่อแล้ว ✅';
+        } else {
+          this.geminiStatusBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold';
+          this.geminiStatusBadge.textContent = '⚠️ รอระบุ GEMINI_API_KEY ใน .env';
+        }
+      }
+    } catch (e) {
+      console.warn('[AffiliateApp] Could not refresh config status badges:', e.message);
     }
   }
 

@@ -11,6 +11,10 @@ services:
         value: production
       - key: PORT
         value: 3000
+      - key: ADMIN_USERNAME
+        value: "admin"
+      - key: ADMIN_PASSWORD
+        sync: false
       - key: WEBHOOK_RELAY_URL
         value: "https://hook.eu1.make.com/03af6d4heuc2qg4g11ijn9lq8llsla8t"
       - key: FACEBOOK_PAGE_ID

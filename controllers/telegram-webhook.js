@@ -170,6 +170,43 @@ class TelegramWebhookController {
       return { success: false, error: err.response?.data || err.message };
     }
   }
+
+  /**
+   * รวมศูนย์ Polling ไว้ที่ Server จุดเดียว (ป้องกัน 409 Conflict จากการเปิดหลายเบราว์เซอร์)
+   */
+  startServerPolling() {
+    if (!this.botToken || this.isPollingActive) return;
+    this.isPollingActive = true;
+    let lastOffset = 0;
+    console.log('[Telegram Central Polling] Active on backend server (Zero browser conflicts)');
+
+    const poll = async () => {
+      if (!this.isPollingActive) return;
+      try {
+        const url = `https://api.telegram.org/bot${this.botToken}/getUpdates?offset=${lastOffset}&limit=20&timeout=10`;
+        const res = await axios.get(url, { timeout: 15000 });
+        if (res.data && res.data.ok && Array.isArray(res.data.result)) {
+          for (const update of res.data.result) {
+            lastOffset = update.update_id + 1;
+            const fakeReq = { body: update, headers: { 'x-telegram-bot-api-secret-token': this.webhookSecret } };
+            const fakeRes = { status: () => ({ send: () => {} }) };
+            await this.handleWebhook(fakeReq, fakeRes);
+          }
+        }
+      } catch (err) {
+        if (err.response?.status === 409) {
+          console.warn('[Telegram Polling] 409 Conflict: Webhook or another instance active. Backing off 10s...');
+          await new Promise(r => setTimeout(r, 10000));
+        } else {
+          console.warn('[Telegram Polling Notice]:', err.message);
+          await new Promise(r => setTimeout(r, 5000));
+        }
+      }
+      setTimeout(poll, 2000);
+    };
+
+    poll();
+  }
 }
 
 module.exports = new TelegramWebhookController();

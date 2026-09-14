@@ -9,48 +9,50 @@ class MultiChannelPublisher {
   }
 
   loadCredentials() {
+    // Purge legacy credentials from client-side localStorage (Security Guard)
+    localStorage.removeItem('aff_tg_bot_token');
+    localStorage.removeItem('aff_fb_access_token');
+    localStorage.removeItem('aff_tw_bearer');
+    localStorage.removeItem('aff_tw_bearer_token');
+    localStorage.removeItem('aff_tw_webhook');
+    localStorage.removeItem('aff_tw_webhook_url');
+
     // Telegram
     this.telegram = {
-      enabled: localStorage.getItem('aff_tg_enabled') === 'true',
-      botToken: localStorage.getItem('aff_tg_bot_token') || '',
+      enabled: localStorage.getItem('aff_tg_enabled') !== 'false',
       channelId: localStorage.getItem('aff_tg_channel_id') || ''
     };
 
     // Facebook Page
     this.facebook = {
       enabled: localStorage.getItem('aff_fb_enabled') !== 'false',
-      pageId: localStorage.getItem('aff_fb_page_id') || '106756152526353',
-      accessToken: localStorage.getItem('aff_fb_access_token') || ''
+      pageId: localStorage.getItem('aff_fb_page_id') || '106756152526353'
     };
 
-    // X (Twitter) / Universal Webhook
+    // X (Twitter)
     this.twitter = {
-      enabled: localStorage.getItem('aff_tw_enabled') === 'true',
-      webhookUrl: localStorage.getItem('aff_tw_webhook_url') || '', // Make.com / Zapier / Direct API
-      bearerToken: localStorage.getItem('aff_tw_bearer_token') || ''
+      enabled: localStorage.getItem('aff_tw_enabled') !== 'false'
     };
   }
 
   saveCredentials(data) {
     if (data.telegram) {
-      this.telegram = { ...this.telegram, ...data.telegram };
+      this.telegram.enabled = data.telegram.enabled !== false;
+      if (data.telegram.channelId) this.telegram.channelId = data.telegram.channelId;
       localStorage.setItem('aff_tg_enabled', this.telegram.enabled ? 'true' : 'false');
-      localStorage.setItem('aff_tg_bot_token', this.telegram.botToken);
-      localStorage.setItem('aff_tg_channel_id', this.telegram.channelId);
+      if (data.telegram.channelId) localStorage.setItem('aff_tg_channel_id', this.telegram.channelId);
     }
 
     if (data.facebook) {
-      this.facebook = { ...this.facebook, ...data.facebook };
+      this.facebook.enabled = data.facebook.enabled !== false;
+      if (data.facebook.pageId) this.facebook.pageId = data.facebook.pageId;
       localStorage.setItem('aff_fb_enabled', this.facebook.enabled ? 'true' : 'false');
-      localStorage.setItem('aff_fb_page_id', this.facebook.pageId);
-      localStorage.setItem('aff_fb_access_token', this.facebook.accessToken);
+      if (data.facebook.pageId) localStorage.setItem('aff_fb_page_id', this.facebook.pageId);
     }
 
     if (data.twitter) {
-      this.twitter = { ...this.twitter, ...data.twitter };
+      this.twitter.enabled = data.twitter.enabled !== false;
       localStorage.setItem('aff_tw_enabled', this.twitter.enabled ? 'true' : 'false');
-      localStorage.setItem('aff_tw_webhook_url', this.twitter.webhookUrl);
-      localStorage.setItem('aff_tw_bearer_token', this.twitter.bearerToken);
     }
   }
 
@@ -67,8 +69,8 @@ class MultiChannelPublisher {
       twitter: { success: false, message: 'ไม่ได้เปิดใช้งาน' }
     };
 
-    // 1. Telegram Channel (ส่งรูป + Inline Keyboard Button ใต้ภาพ)
-    if (this.telegram.enabled && this.telegram.botToken && this.telegram.channelId) {
+    // 1. Telegram Channel (ส่งผ่าน Server Endpoint: /api/telegram/post)
+    if (this.telegram.enabled) {
       try {
         const tgData = post.telegram || {
           caption: post.caption,
@@ -85,16 +87,16 @@ class MultiChannelPublisher {
         );
 
         results.telegram = {
-          success: true,
-          message: `โพสต์พร้อมปุ่ม Inline Button สำเร็จ (Message ID: ${tgRes.result?.message_id || 'OK'})`
+          success: tgRes.success,
+          message: tgRes.success ? 'โพสต์ Telegram สำเร็จ (ผ่าน Server-Side Env)' : (tgRes.error || 'ล้มเหลว')
         };
       } catch (err) {
         results.telegram = { success: false, message: err.message };
       }
     }
 
-    // 2. Facebook Page (โพสต์ภาพไม่มีลิงก์ ➡️ ยิง First Comment แปะลิงก์ทันที)
-    if (this.facebook.enabled && this.facebook.pageId && this.facebook.accessToken) {
+    // 2. Facebook Page (ส่งผ่าน Server Endpoint: /api/facebook/post)
+    if (this.facebook.enabled) {
       try {
         const fbData = post.facebook || {
           caption: post.caption,
@@ -109,15 +111,15 @@ class MultiChannelPublisher {
         );
 
         results.facebook = {
-          success: true,
-          message: `โพสต์ภาพและยิง First Comment สำเร็จ (Post ID: ${fbRes.postId || 'OK'})`
+          success: fbRes.success,
+          message: fbRes.success ? 'โพสต์ Facebook Page สำเร็จ (ผ่าน Server-Side Env)' : (fbRes.error || 'ล้มเหลว')
         };
       } catch (err) {
         results.facebook = { success: false, message: err.message };
       }
     }
 
-    // 3. X (Twitter / Webhook) (ทวีตหลัก Hook+ภาพ ➡️ ยิง Thread Reply)
+    // 3. X (Twitter / Webhook) (ส่งผ่าน Server Endpoint: /api/twitter/tweet)
     if (this.twitter.enabled) {
       try {
         const xData = post.twitter || {
@@ -133,8 +135,8 @@ class MultiChannelPublisher {
         );
 
         results.twitter = {
-          success: true,
-          message: 'ยิงทวีตหลักและ Thread Reply สำเร็จ'
+          success: twRes.success,
+          message: twRes.success ? 'ยิงทวีตหลักและ Thread Reply สำเร็จ (ผ่าน Server-Side Env)' : (twRes.error || 'ล้มเหลว')
         };
       } catch (err) {
         results.twitter = { success: false, message: err.message };
@@ -145,149 +147,81 @@ class MultiChannelPublisher {
   }
 
   /**
-   * ยิงเข้า Telegram พร้อม Inline Keyboard Button ใต้รูปภาพ
+   * ตัวช่วยต่อท้ายข้อความเปิดเผย Affiliate Disclosure (#ad) ป้องกันการลบออก
+   */
+  ensureAffiliateDisclosure(text, maxLength = null) {
+    const disclosure = '#ad มีค่าคอมมิชชันจากการซื้อผ่านลิงก์นี้';
+    let str = (text || '').trim();
+    if (!str.includes('#ad')) {
+      const suffix = '\n\n' + disclosure;
+      if (maxLength && (str.length + suffix.length) > maxLength) {
+        str = str.slice(0, maxLength - suffix.length - 3) + '...' + suffix;
+      } else {
+        str = str + suffix;
+      }
+    }
+    return str;
+  }
+
+  /**
+   * ส่ง Telegram ผ่าน Server-Side Proxy (ไม่ถือ Bot Token ฝั่ง Client)
    */
   async sendToTelegram(caption, imageUrl, buttonText = '👉 สั่งซื้อตรงนี้', buttonUrl = '') {
-    const endpoint = `https://api.telegram.org/bot${this.telegram.botToken}/sendPhoto`;
-    
-    // ตัดคำ Caption ไม่ให้เกิน 1,020 ตัวอักษร เพื่อป้องกัน Error 400 จาก Telegram (จำกัดที่ 1,024 ตัวอักษร)
-    let cleanCaption = (caption || '').trim();
-    if (cleanCaption.length > 1020) {
-      cleanCaption = cleanCaption.slice(0, 1017) + '...';
-    }
-
-    const bodyPayload = {
-      chat_id: this.telegram.channelId,
-      photo: imageUrl,
-      caption: cleanCaption
-    };
-
-    // แนบปุ่ม Inline Keyboard Button เมื่อมี URL
-    if (buttonUrl) {
-      bodyPayload.reply_markup = {
-        inline_keyboard: [
-          [{ text: buttonText, url: buttonUrl }]
-        ]
-      };
-    }
-
-    const response = await fetch(endpoint, {
+    const secureCaption = this.ensureAffiliateDisclosure(caption, 1020);
+    const response = await fetch('/api/telegram/post', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bodyPayload)
+      body: JSON.stringify({
+        caption: secureCaption,
+        imageUrl,
+        buttonText,
+        buttonUrl
+      })
     });
 
     const data = await response.json();
-    if (!data.ok) throw new Error(data.description || 'Telegram send failed');
+    if (!data.success && data.error) throw new Error(data.error);
     return data;
   }
 
   /**
-   * ยิงเข้า Facebook Page (โพสต์ภาพ ➡️ ส่ง First Comment ปักลิงก์)
+   * ส่ง Facebook Page ผ่าน Server-Side Proxy (ไม่ถือ Page Access Token ฝั่ง Client)
    */
-  async sendToFacebookPage(message, imageUrl, firstComment = '') {
-    // 1. โพสต์ภาพและแคปชัน (ไม่มีลิงก์ เพื่อป้องกันการลดการมองเห็น)
-    const photoEndpoint = `https://graph.facebook.com/v19.0/${this.facebook.pageId}/photos`;
-    const photoResponse = await fetch(photoEndpoint, {
+  async sendToFacebookPage(caption, imageUrl, firstComment = '') {
+    const secureCaption = this.ensureAffiliateDisclosure(caption);
+    const response = await fetch('/api/facebook/post', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        url: imageUrl,
-        caption: message,
-        access_token: this.facebook.accessToken
+        caption: secureCaption,
+        imageUrl,
+        firstComment
       })
     });
 
-    const photoData = await photoResponse.json();
-    if (photoData.error) throw new Error(photoData.error.message || 'Facebook photo post failed');
-    
-    const targetPostId = photoData.post_id || photoData.id;
-
-    // 2. ยิง First Comment ปักลิงก์ Affiliate ทันที (รองรับทั้งเพจแบบคลาสสิกและ New Page Experience)
-    let commentData = null;
-    if (targetPostId && firstComment) {
-      const candidateIds = [];
-      // สำหรับ New Page Experience: ดึงเฉพาะตัวเลขหลังเครื่องหมาย _ (Underscore)
-      if (typeof targetPostId === 'string' && targetPostId.includes('_')) {
-        const purePostId = targetPostId.split('_').pop();
-        if (purePostId) candidateIds.push(purePostId);
-      }
-      candidateIds.push(targetPostId);
-      if (photoData.id && !candidateIds.includes(photoData.id)) {
-        candidateIds.push(photoData.id);
-      }
-
-      for (const idToTry of candidateIds) {
-        try {
-          const commentEndpoint = `https://graph.facebook.com/v19.0/${idToTry}/comments`;
-          const commentResponse = await fetch(commentEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message: firstComment,
-              access_token: this.facebook.accessToken
-            })
-          });
-          commentData = await commentResponse.json();
-          if (commentData && commentData.id && !commentData.error) {
-            console.log(`[Facebook] First comment posted successfully using ID: ${idToTry}`);
-            break;
-          } else {
-            console.warn(`[Facebook] First comment with ID ${idToTry} returned:`, commentData?.error?.message || commentData);
-          }
-        } catch (cErr) {
-          console.warn(`[Facebook] First comment attempt failed with ID ${idToTry}:`, cErr.message);
-        }
-      }
-    }
-
-    return {
-      postId: targetPostId,
-      commentId: commentData?.id || null
-    };
+    const data = await response.json();
+    if (!data.success && data.error) throw new Error(data.error);
+    return data;
   }
 
   /**
-   * ยิงเข้า X (Twitter) (ทวีตหลัก ➡️ Thread Reply แปะลิงก์)
+   * ส่ง X (Twitter) ผ่าน Server-Side Proxy (ไม่ถือ Bearer Token ฝั่ง Client)
    */
   async sendToTwitter(mainTweet, imageUrl, threadReply = '') {
-    if (this.twitter.webhookUrl) {
-      // ส่งผ่าน Webhook โดยส่งทั้งทวีตหลักและข้อความ Thread Reply
-      const response = await fetch(this.twitter.webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          platform: 'twitter',
-          main_tweet: mainTweet,
-          thread_reply: threadReply,
-          text: mainTweet,
-          image: imageUrl,
-          timestamp: new Date().toISOString()
-        })
-      });
-      if (!response.ok) throw new Error(`Webhook Error (${response.status})`);
-      return true;
-    } else {
-      // ส่งผ่าน Backend Proxy Server เพื่อหลีกเลี่ยง CORS Restriction ของ Browser 100%
-      try {
-        const response = await fetch('/api/twitter/tweet', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            mainTweet,
-            threadReply,
-            imageUrl,
-            bearerToken: this.twitter.bearerToken
-          })
-        });
-        if (response.ok) return true;
-        const data = await response.json();
-        throw new Error(data.error || 'Twitter dispatch failed');
-      } catch (err) {
-        console.warn('Backend twitter proxy error:', err.message);
-        throw err;
-      }
-    }
+    const secureTweet = this.ensureAffiliateDisclosure(mainTweet, 280);
+    const response = await fetch('/api/twitter/tweet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mainTweet: secureTweet,
+        threadReply,
+        imageUrl
+      })
+    });
+
+    const data = await response.json();
+    if (!data.success && data.error) throw new Error(data.error);
+    return data;
   }
 }
 

@@ -26,6 +26,42 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ==============================================================================
+// Basic Authentication Middleware (Protects Dashboard & Admin Routes)
+// ==============================================================================
+const basicAuthMiddleware = (req, res, next) => {
+  // ข้อยกเว้น: Public Routes ที่ external services ต้องเรียกเข้ามา
+  const publicPaths = ['/api/health', '/webhook/telegram'];
+  if (publicPaths.includes(req.path)) {
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="AffiliatePilot Dashboard"');
+    return res.status(401).send('Authentication required to access AffiliatePilot Dashboard');
+  }
+
+  try {
+    const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString('utf8');
+    const [username, password] = credentials.split(':');
+
+    const expectedUser = process.env.ADMIN_USERNAME || 'admin';
+    const expectedPass = process.env.ADMIN_PASSWORD || 'affiliate_pilot_admin_2026';
+
+    if (username === expectedUser && password === expectedPass) {
+      return next();
+    }
+  } catch (err) {
+    // Format error
+  }
+
+  res.setHeader('WWW-Authenticate', 'Basic realm="AffiliatePilot Dashboard"');
+  return res.status(401).send('Invalid credentials');
+};
+
+app.use(basicAuthMiddleware);
+
 // Serve static frontend files (Dashboard UI)
 app.use(express.static(path.join(__dirname)));
 
@@ -140,9 +176,60 @@ app.post('/api/queue/clear', (req, res) => {
   res.json(queueWorker.clearQueue());
 });
 
+app.post('/api/queue/enqueue', (req, res) => {
+  try {
+    const { post } = req.body;
+    if (!post || !post.deal) {
+      return res.status(400).json({ success: false, error: 'post with deal is required' });
+    }
+    const jobs = queueWorker.enqueueDeal(post);
+    res.json({
+      success: true,
+      jobsScheduled: jobs.length,
+      jobs: jobs.map(j => ({ id: j.id, platform: j.platform, scheduledAt: j.scheduledAt }))
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ==============================================================================
-// 6. Twitter Proxy Endpoint (CORS-Safe Server Dispatch)
+// 6. Secure Social & AI Proxy Endpoints (Zero Client Credential Exposure)
 // ==============================================================================
+
+// Telegram Post Proxy (Server holds TELEGRAM_BOT_TOKEN)
+app.post('/api/telegram/post', async (req, res) => {
+  try {
+    const { caption, imageUrl, buttonText, buttonUrl } = req.body;
+    const result = await socialPublisher.sendToTelegram(caption, imageUrl, buttonText, buttonUrl);
+    res.json({
+      success: Boolean(result?.success),
+      messageId: result?.messageId || null,
+      error: result?.error || null,
+      simulated: Boolean(result?.simulated)
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Facebook Page Post Proxy (Server holds FACEBOOK_PAGE_ACCESS_TOKEN)
+app.post('/api/facebook/post', async (req, res) => {
+  try {
+    const { caption, imageUrl, firstComment } = req.body;
+    const result = await socialPublisher.sendToFacebookPage(caption, imageUrl, firstComment);
+    res.json({
+      success: Boolean(result?.success),
+      postId: result?.postId || null,
+      error: result?.error || null,
+      simulated: Boolean(result?.simulated)
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Twitter Tweet Proxy (Server holds TWITTER_API_KEY / Webhook)
 app.post('/api/twitter/tweet', async (req, res) => {
   try {
     const { mainTweet, threadReply, imageUrl } = req.body;
@@ -151,6 +238,72 @@ app.post('/api/twitter/tweet', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Universal Multi-Publisher Proxy
+app.post('/api/social/publish', async (req, res) => {
+  try {
+    const { platform, caption, imageUrl, firstComment, buttonText, buttonUrl, mainTweet, threadReply } = req.body;
+    let result;
+    if (platform === 'telegram') {
+      result = await socialPublisher.sendToTelegram(caption, imageUrl, buttonText, buttonUrl);
+    } else if (platform === 'facebook') {
+      result = await socialPublisher.sendToFacebookPage(caption, imageUrl, firstComment);
+    } else if (platform === 'twitter') {
+      result = await socialPublisher.sendToTwitter(mainTweet || caption, imageUrl, threadReply || firstComment);
+    } else {
+      return res.status(400).json({ success: false, error: 'Invalid platform specified' });
+    }
+
+    res.json({
+      success: Boolean(result?.success),
+      postId: result?.postId || result?.messageId || null,
+      error: result?.error || null,
+      simulated: Boolean(result?.simulated)
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// AI Chat Assistant Proxy (Server holds GEMINI_API_KEY)
+app.post(['/api/chat', '/api/ai/chat'], async (req, res) => {
+  try {
+    const query = req.body.userQuery || req.body.query || '';
+    const candidateDeals = req.body.candidateDeals || [];
+    const sender = req.body.senderName || req.body.sender || 'เพื่อนสมาชิก';
+    const aiResult = await geminiAI.chatWithCustomer(query, candidateDeals, sender);
+    res.json({
+      success: true,
+      text: aiResult.text,
+      deal: aiResult.deal || null
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ตรวจสอบสถานะการเชื่อมต่อบริการต่างๆ โดยส่งเฉพาะค่า boolean (ห้าม expose secret/token)
+app.get('/api/config/status', (req, res) => {
+  res.json({
+    telegram: {
+      configured: Boolean((process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHANNEL_ID) || process.env.WEBHOOK_RELAY_URL),
+      hasDirectToken: Boolean(process.env.TELEGRAM_BOT_TOKEN)
+    },
+    facebook: {
+      configured: Boolean((process.env.FACEBOOK_PAGE_ACCESS_TOKEN && process.env.FACEBOOK_PAGE_ID) || process.env.WEBHOOK_RELAY_URL),
+      pageId: process.env.FACEBOOK_PAGE_ID || null
+    },
+    twitter: {
+      configured: Boolean(process.env.TWITTER_API_KEY || process.env.WEBHOOK_RELAY_URL)
+    },
+    gemini: {
+      configured: Boolean(process.env.GEMINI_API_KEY)
+    },
+    webhookRelay: {
+      configured: Boolean(process.env.WEBHOOK_RELAY_URL)
+    }
+  });
 });
 
 // ==============================================================================
@@ -182,4 +335,7 @@ app.listen(PORT, () => {
   console.log(`⚡ Telegram Webhook: POST http://localhost:${PORT}/webhook/telegram`);
   console.log(`🛒 Shopee GraphQL Status: ${shopeeGraphQL.isConfigured() ? 'Connected (Official)' : 'Fallback Mode'}`);
   console.log('=================================================================');
+
+  // เริ่มต้น Telegram Polling รวมศูนย์บน Server (ถ้ามี Token และไม่ได้ใช้ Webhook)
+  telegramWebhook.startServerPolling();
 });

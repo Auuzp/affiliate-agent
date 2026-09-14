@@ -10,15 +10,19 @@ class TelegramDealBot {
     this.publisher = publisher;
     this.isPolling = false;
     this.pollingTimer = null;
-    this.lastOffset = parseInt(localStorage.getItem('aff_tg_last_offset') || '0', 10);
     this.onInquiryCallback = null;
-    this.botToken = localStorage.getItem('aff_tg_bot_token') || '';
+    // Purge legacy client-side Telegram bot token for security
+    localStorage.removeItem('aff_tg_bot_token');
     this.channelId = localStorage.getItem('aff_tg_channel_id') || '';
   }
 
   setCredentials(token, channelId) {
-    this.botToken = (token || '').trim();
-    this.channelId = (channelId || '').trim();
+    // ป้องกันการบันทึก bot token ใน browser client
+    localStorage.removeItem('aff_tg_bot_token');
+    if (channelId) {
+      this.channelId = channelId.trim();
+      localStorage.setItem('aff_tg_channel_id', this.channelId);
+    }
   }
 
   setInquiryListener(callback) {
@@ -26,17 +30,11 @@ class TelegramDealBot {
   }
 
   /**
-   * เริ่มต้นการทำงานของบอทรับข้อความ (Polling Mode)
+   * เริ่มต้นการทำงานของบอทรับข้อความ (รวมศูนย์บน Server-Side เพื่อป้องกัน 409 Conflict)
    */
   start() {
-    if (this.isPolling) return;
-    this.botToken = localStorage.getItem('aff_tg_bot_token') || this.botToken;
-    if (!this.botToken) {
-      throw new Error('กรุณาระบุ Telegram Bot Token ในหน้าตั้งค่าก่อนเปิดใช้งานบอท');
-    }
-
     this.isPolling = true;
-    this.pollUpdates();
+    console.log('[TelegramBot Client] บอททำงานผ่าน Server-side Webhook/Polling (ปลอด 409 Conflict)');
   }
 
   /**
@@ -47,47 +45,6 @@ class TelegramDealBot {
     if (this.pollingTimer) {
       clearTimeout(this.pollingTimer);
       this.pollingTimer = null;
-    }
-  }
-
-  /**
-   * ดึงข้อความอัปเดตจาก Telegram Bot API (getUpdates)
-   */
-  async pollUpdates() {
-    if (!this.isPolling || !this.botToken) return;
-
-    try {
-      const url = `https://api.telegram.org/bot${this.botToken}/getUpdates?offset=${this.lastOffset}&limit=20&timeout=8`;
-      const response = await fetch(url);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.ok && Array.isArray(data.result) && data.result.length > 0) {
-          for (const update of data.result) {
-            // อัปเดต offset เพื่อไม่ให้ประมวลผลข้อความซ้ำ
-            this.lastOffset = update.update_id + 1;
-            localStorage.setItem('aff_tg_last_offset', this.lastOffset.toString());
-
-            // ตรวจสอบว่าเป็นข้อความแชต
-            const message = update.message || update.channel_post;
-            if (message && message.text) {
-              await this.handleIncomingMessage(message);
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('[TelegramBot] Polling connection notice:', err.message);
-      // เพิ่มโค้ดหน่วงเวลา 10 วินาทีเมื่อเกิด Error เพื่อป้องกัน Telegram แบน IP ชั่วคราว
-      if (this.isPolling) {
-        this.pollingTimer = setTimeout(() => this.pollUpdates(), 10000);
-      }
-      return; // ใส่ return เพื่อไม่ให้ไปรันคำสั่ง setTimeout 1.5 วินาทีด้านล่างซ้ำ
-    }
-
-    // ทำงานรอบถัดไป
-    if (this.isPolling) {
-      this.pollingTimer = setTimeout(() => this.pollUpdates(), 1500);
     }
   }
 
@@ -165,38 +122,35 @@ class TelegramDealBot {
   }
 
   /**
-   * ส่งรูปภาพ + แคปชัน
+   * ส่งรูปภาพ + แคปชัน (ผ่าน Server-Side Proxy ปลอดภัย 100%)
    */
   async sendPhoto(chatId, photoUrl, caption) {
-    const endpoint = `https://api.telegram.org/bot${this.botToken}/sendPhoto`;
     // ตัดความยาวไม่ให้เกิน 1,020 ตัวอักษร เพื่อป้องกัน Error 400 จาก Telegram API
     let cleanCaption = (caption || '').trim();
     if (cleanCaption.length > 1020) {
       cleanCaption = cleanCaption.slice(0, 1017) + '...';
     }
-    const response = await fetch(endpoint, {
+    const response = await fetch('/api/telegram/post', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: chatId,
-        photo: photoUrl,
-        caption: cleanCaption
+        caption: cleanCaption,
+        imageUrl: photoUrl
       })
     });
     return response.json();
   }
 
   /**
-   * ส่งข้อความธรรมดา
+   * ส่งข้อความธรรมดา (ผ่าน Server-Side Proxy ปลอดภัย 100%)
    */
   async sendMessage(chatId, text) {
-    const endpoint = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
-    const response = await fetch(endpoint, {
+    const response = await fetch('/api/telegram/post', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: chatId,
-        text: text
+        caption: text,
+        imageUrl: null
       })
     });
     return response.json();

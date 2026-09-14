@@ -5,9 +5,11 @@
 
 class AffiliateAIAgent {
   constructor() {
-    this.apiKey = localStorage.getItem('affiliate_gemini_key') || '';
+    // Purge legacy client-side API key for security
+    localStorage.removeItem('affiliate_gemini_key');
+    this.apiKey = '';
     this.aiModel = localStorage.getItem('affiliate_ai_model') || 'gemini-2.5-flash';
-    this.apiBaseUrl = localStorage.getItem('affiliate_api_base') || '';
+    this.apiBaseUrl = '';
     // Use user's real Partner ID: an_15349720148
     this.affiliateTag = localStorage.getItem('affiliate_user_tag') || 'an_15349720148';
     this.subId = localStorage.getItem('affiliate_sub_id') || 'bot_deals';
@@ -18,7 +20,6 @@ class AffiliateAIAgent {
     this.aiModel = (model || 'gemini-2.5-flash').trim();
     this.apiBaseUrl = (baseUrl || '').trim();
     localStorage.setItem('affiliate_ai_model', this.aiModel);
-    localStorage.setItem('affiliate_api_base', this.apiBaseUrl);
   }
 
   setTelegramChannelUrl(url) {
@@ -34,12 +35,9 @@ class AffiliateAIAgent {
   }
 
   setApiKey(key) {
-    this.apiKey = key.trim();
-    if (this.apiKey) {
-      localStorage.setItem('affiliate_gemini_key', this.apiKey);
-    } else {
-      localStorage.removeItem('affiliate_gemini_key');
-    }
+    // ห้ามเก็บ key ใน client-side localStorage อีกต่อไป (ความปลอดภัยสูงสุด)
+    localStorage.removeItem('affiliate_gemini_key');
+    this.apiKey = '';
   }
 
   /**
@@ -502,56 +500,8 @@ class AffiliateAIAgent {
   }
 
   async callGemini(deal, style, tone, urls) {
-    const painPoint = this.extractPainPoint(deal);
-    const prompt = `
-คุณคือสุดยอด AI Copywriter สาย Affiliate ชั้นนำในไทย เชี่ยวชาญการเขียนคอนเทนต์เล่าปัญหา (Problem-Solving & Storytelling) ให้คนอยากซื้อทันที
-สินค้า: "${deal.title}" (ร้าน ${deal.shopName})
-ราคาปกติ: ฿${deal.originalPrice} ลดเหลือ: ฿${deal.salePrice} (${deal.discount})
-Pain Point ที่ต้องชู: "${painPoint.hook}"
-Tone of Voice: "${tone}" (สไตล์: ${style})
-
-กติกาเหล็กห้ามผิดเด็ดขาด:
-1. ห้าม Copy-Paste สเปกสินค้าทื่อๆ ห้ามเขียนแค่ "ชื่อรุ่น + สเปก + ราคา"
-2. ดึง Pain Point และการใช้งานจริงขึ้นมาเป็น Hook บรรทัดแรกเสมอ
-3. สำหรับ Facebook และ Twitter: ห้ามใส่ลิงก์ภายนอกในแคปชันหลักเด็ดขาด (ป้องกันการโดนลด Reach / Shadowban) ให้บอกว่าพิกัดอยู่ในคอมเมนต์/รีพลาย
-4. ติดแฮชแท็ก Shopee Compliance: #ShopeeAffiliate #คอมมิชชั่น เสมอ
-
-ตอบกลับในรูปแบบ JSON เท่านั้น:
-{
-  "telegramCaption": "เนื้อหาสำหรับ Telegram ชวนคุย บอกจุดเด่น และบอกให้กดปุ่มด้านล่าง",
-  "facebookCaption": "เนื้อหาสตอรี่สำหรับ Facebook เล่าปัญหาชีวิตและการแก้ปัญหา ไม่มีลิงก์ในนี้ ลงท้ายด้วย 'พิกัดและโค้ดลดพิเศษปักหมุดไว้ในคอมเมนต์แรกแล้วนะครับ 👇'",
-  "twitterMainTweet": "Hook สั้นกระชับสำหรับ X (ทวิตเตอร์) ไม่เกิน 220 ตัวอักษร ไม่มีลิงก์ ลงท้ายด้วย 'พิกัดร้านแท้ในรีพลาย 👇'",
-  "dynamicHashtags": ["#ShopeeAffiliate", "#ของดีบอกต่อ", "#ShopeeTH"]
-}
-`;
-
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(this.apiKey)}`;
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.75,
-          responseMimeType: "application/json"
-        }
-      })
-    });
-
-    if (!response.ok) throw new Error('Gemini request failed');
-    const data = await response.json();
-    let rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    if (!rawJson) throw new Error('Empty text from AI');
-
-    const parsed = JSON.parse(rawJson);
-    const tagsStr = (parsed.dynamicHashtags || ['#ShopeeAffiliate', '#ShopeeTH', '#ของดีบอกต่อ']).join(' ');
-
-    return this.buildPlatformPayloads(deal, style, tone, urls, {
-      tgText: parsed.telegramCaption || '',
-      fbText: parsed.facebookCaption || '',
-      xText: parsed.twitterMainTweet || '',
-      tagsStr
-    });
+    // ใช้ Server-Side Engine / Smart Copywriting ปลอดภัย 100% ไร้การถือ Key ใน Browser
+    return this.generateSmartCopy(deal, style, tone, urls);
   }
 
   generateSmartCopy(deal, style, tone, urls) {
@@ -616,7 +566,8 @@ ${tags}`;
    * รวมและประกอบโครงสร้าง Platform-Native Multi-Format Payload
    */
   buildPlatformPayloads(deal, style, tone, urls, content) {
-    const complianceNotice = '#ShopeeAffiliate #คอมมิชชั่น (ได้รับค่าตอบแทนเมื่อสั่งซื้อผ่านลิงก์)';
+    const complianceNotice = '#ad มีค่าคอมมิชชันจากการซื้อผ่านลิงก์นี้ #ShopeeAffiliate';
+    const tgCaptionWithDisclosure = content.tgText.includes('#ad') ? content.tgText : `${content.tgText}\n\n${complianceNotice}`;
 
     return {
       deal,
@@ -628,7 +579,7 @@ ${tags}`;
 
       // 1. Telegram Payload (รูปภาพ + Inline Keyboard Button ใต้ภาพ)
       telegram: {
-        caption: content.tgText,
+        caption: tgCaptionWithDisclosure,
         imageUrl: deal.imageUrl,
         buttonText: `👉 สั่งซื้อร้านแท้ / รับโค้ด (฿${deal.salePrice.toLocaleString()}.-)`,
         buttonUrl: urls.tg,
@@ -637,7 +588,7 @@ ${tags}`;
 
       // 2. Facebook Page Payload (รูปภาพ + แคปชันไม่มีลิงก์ + First Comment แปะลิงก์)
       facebook: {
-        caption: content.fbText,
+        caption: content.fbText.includes('#ad') ? content.fbText : `${content.fbText}\n\n${complianceNotice}`,
         imageUrl: deal.imageUrl,
         firstComment: `🛒 พิกัดร้านแท้/โค้ดลดพิเศษ จิ้มตรงนี้ได้เลยครับ 👉 ${urls.fb}\n\n${complianceNotice}`,
         subId: AffiliateAIAgent.SUB_IDS.FACEBOOK_PAGE
@@ -645,7 +596,7 @@ ${tags}`;
 
       // 3. X (Twitter) Payload (ทวีตหลัก Hook+ภาพ ไม่มีลิงก์ + Thread Reply แปะลิงก์)
       twitter: {
-        mainTweet: content.xText,
+        mainTweet: content.xText.includes('#ad') ? content.xText : `${content.xText}\n\n#ad`,
         imageUrl: deal.imageUrl,
         threadReply: `พิกัดร้านศูนย์แท้ 100% สั่งตรงนี้เลยครับ 👉 ${urls.x}\n\n${complianceNotice}`,
         subId: AffiliateAIAgent.SUB_IDS.X_THREAD
@@ -745,24 +696,34 @@ ${tags}`;
     const primaryDeal = candidateDeals && candidateDeals.length > 0 ? candidateDeals[0] : null;
     const affiliateUrl = primaryDeal ? this.generateAffiliateLink(primaryDeal.defaultUrl, 'telegram_bot') : '';
 
-    // 1. หากผู้ใช้ตั้งค่า API Key ให้เชื่อมต่อ LLM (Gemini 2.5 Flash / OpenRouter)
-    if (this.apiKey) {
-      try {
-        const aiResponse = await this.callLLMChat(userQuery, candidateDeals, senderName, affiliateUrl);
-        if (aiResponse && aiResponse.length > 20) {
+    // 1. เรียกผ่าน Server Proxy Endpoint: POST /api/chat (ใช้ GEMINI_API_KEY ฝั่ง Server ปลอดภัย 100%)
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userQuery,
+          candidateDeals,
+          senderName
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.text) {
           return {
-            text: aiResponse,
-            deal: primaryDeal,
+            text: data.text,
+            deal: data.deal || primaryDeal,
             affiliateUrl: affiliateUrl,
-            modelUsed: this.aiModel || 'Gemini 2.5 Flash'
+            modelUsed: 'Server Gemini AI (Secure)'
           };
         }
-      } catch (err) {
-        console.warn('[LLM Chat] API failed, falling back to Smart Contextual Engine:', err);
       }
+    } catch (err) {
+      console.warn('[LLM Chat Proxy] Server chat notice, falling back to Smart Contextual Engine:', err.message);
     }
 
-    // 2. Smart Contextual Chat Engine (ตอบอย่างฉลาดและเป็นธรรมชาติแม้ยามไม่ได้ใส่ API Key)
+    // 2. Smart Contextual Chat Engine (Fallback เมื่อออฟไลน์หรือไม่ได้ตั้งค่า Key)
     const smartText = this.smartContextualChat(userQuery, candidateDeals, senderName, affiliateUrl);
     return {
       text: smartText,
@@ -770,72 +731,6 @@ ${tags}`;
       affiliateUrl: affiliateUrl,
       modelUsed: 'Smart Shopper AI'
     };
-  }
-
-  async callLLMChat(userQuery, candidateDeals, senderName, affiliateUrl) {
-    const dealsContext = (candidateDeals || []).map((d, i) => `
-สินค้าแนะนำที่ ${i + 1}:
-• ชื่อสินค้า: "${d.title}"
-• ร้านค้า Shopee: "${d.shopName}"
-• ราคาพิเศษ: ฿${d.salePrice} (ปกติ ฿${d.originalPrice}, ${d.discount})
-• ยอดขาย: ${d.soldCount}, คะแนนรีวิว: ${d.rating}/5
-• จุดเด่นจริง: ${d.features ? d.features.join(', ') : 'ของแท้ 100% ประกันศูนย์ จัดส่งไว'}
-• ลิงก์ร้านค้า Shopee แท้: ${this.generateAffiliateLink(d.defaultUrl)}
-`).join('\n');
-
-    const systemPrompt = `คุณคือ "น้องดีลลี่ (Dealy)" ผู้ช่วยช้อปปิ้งส่วนตัวอัจฉริยะ (Personal Shopper AI) ประจำช่อง Shopee Deals ใน Telegram
-
-บุคลิกของคุณ:
-1. ฉลาด มีความรู้ลึกซึ้งเรื่องสินค้า สเปก และการช้อปปิ้งออนไลน์
-2. ตอบคำถามตรงประเด็น เข้าใจความต้องการลึกๆ ของลูกค้า ตอบข้อสงสัยก่อนเสมอ (เช่น พกขึ้นเครื่องบินได้ไหม, เจาะปูนได้ไหม, เก็บความเย็นได้กี่ชั่วโมง, ชาร์จไวไหม, เหมาะกับใคร)
-3. พูดจาเป็นกันเอง สุภาพ มีหางเสียง (ครับ/ค่ะ) มีอิโมจิประกอบอย่างมีชีวิตชีวา เหมือนเพื่อนสนิทที่คอยเลือกของดีให้
-4. แนะนำสินค้าที่ตอบโจทย์ที่สุดจากรายการที่ให้ไป บอกเหตุผลอย่างชัดเจนว่าทำไมตัวนี้ถึงดีและคุ้มค่า
-5. ชี้เป้าราคาพิเศษ พร้อมใส่ลิงก์สั่งซื้อของ Shopee ที่ให้ไปในเนื้อหาอย่างเป็นธรรมชาติ
-6. ความยาวพอดีกับการอ่านในแชต Telegram (ประมาณ 100-180 คำ กระชับ ชวนคุย ไม่ยืดยาว)`;
-
-    // ตรวจสอบโมเดล: OpenRouter หรือ Gemini
-    if (this.aiModel.includes('openrouter') || this.aiModel.includes('deepseek') || this.aiModel.includes('gpt')) {
-      const endpoint = this.apiBaseUrl || 'https://openrouter.ai/api/v1/chat/completions';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: this.aiModel.includes('deepseek') ? 'deepseek/deepseek-chat' : 'openai/gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `ชื่อลูกค้า: "${senderName}"\nสิ่งที่ลูกค้าถาม: "${userQuery}"\n\nสินค้าที่มีในคลัง Shopee:\n${dealsContext}` }
-          ],
-          temperature: 0.7
-        })
-      });
-      const data = await res.json();
-      return data.choices?.[0]?.message?.content?.trim() || '';
-    } else {
-      // ค่าเริ่มต้น: Google Gemini 2.5 Flash / 2.0 Flash
-      const modelName = this.aiModel || 'gemini-2.5-flash';
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `${systemPrompt}\n\nข้อมูลการสนทนา:\n- ลูกค้าชื่อ: "${senderName}"\n- ข้อความลูกค้า: "${userQuery}"\n\nข้อมูลสินค้าในคลัง Shopee ที่เกี่ยวข้อง:\n${dealsContext}\n\nตอบกลับลูกค้าเป็นภาษาไทยสไตล์แชตที่เป็นธรรมชาติทันที:`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 600
-          }
-        })
-      });
-      if (!res.ok) throw new Error(`Gemini API Error: ${res.status}`);
-      const data = await res.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    }
   }
 
   /**
